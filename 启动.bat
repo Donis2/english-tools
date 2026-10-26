@@ -1,5 +1,5 @@
 @echo off
-title Word Practice Hub
+title English Tool
 cd /d "%~dp0"
 
 set "PY="

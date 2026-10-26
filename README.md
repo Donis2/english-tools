@@ -61,7 +61,27 @@ EASYOCR_KEY=...
 `.env` 已被 `.gitignore` 忽略，不会跟着推上 GitHub；换机器可以照 `.env.example` 重新填。
 启动时控制台会打印「云端 OCR ：PaddleOCR-VL-1.6 + 百度高精度/标准 + OCR.space」或提示未配置。
 
+## 线上地址
+
+- 站点：<https://englishtool.netlify.app>
+- 仓库：<https://github.com/Donis2/english-tools>
+- 后台：<https://app.netlify.com/projects/englishtool>
+
 ## 部署到 Netlify
+
+已在 2026-10-26 部署完成，站点 `englishtool`（ID `7974804d-e573-468f-a243-969300f0e8bd`），
+环境变量六条（`PADDLE_TOKEN` / `PADDLE_MODEL` / `BAIDU_API_KEY` / `BAIDU_SECRET_KEY` /
+`OCR_SPACE_KEY` / `EASYOCR_KEY`）已经配好。改完代码重新发布：
+
+```bash
+git push                                   # 先同步到 GitHub
+netlify deploy --prod --dir site --functions netlify/functions
+```
+
+> 站点是 CLI 建的，没有绑定 GitHub 仓库，所以 `git push` 不会自动触发部署；要自动部署得在
+> Netlify 后台 **Project configuration → Build & deploy → Link repository** 手动连一次。
+
+从零部署的步骤：
 
 1. 把本目录推到 GitHub 仓库，Netlify 新建站点指向它（`netlify.toml` 已写好 publish/functions）。
 2. 在 **Site settings → Environment variables** 配这几条（云 OCR 用，缺了就只能走浏览器内 Tesseract）：
