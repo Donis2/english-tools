@@ -18,10 +18,9 @@ const app = createApp({
       }
     );
 
-    // 同步表单输入
-    const newToken = ref('');
-    const existToken = ref('');
-    const existGistId = ref('');
+    // 同步表单输入（两块表单共用一个 Token 输入，避免填错框）
+    const syncToken = ref('');
+    const syncGistId = ref('');
 
     // 轻量级 toast 提示（非阻塞，自动消失）
     const toast = ref({ show: false, text: '', type: 'info' });
@@ -84,32 +83,49 @@ const app = createApp({
       if (window.PracticeSync.state.gistReady) window.PracticeSync.pushGist();
     }
 
-    // 首次绑定（在这台设备创建同步）
+    // 新建 Gist（这台设备第一次用，本机进度为源头）
     async function bindNew() {
-      if (!newToken.value.trim()) {
+      const token = syncToken.value.trim();
+      if (!token) {
         showToast('请先输入 GitHub Token', 'error');
         return;
       }
+      // 填了 Gist ID 还点「新建」是最常见的误操作：会凭空多出一个空 Gist，
+      // 原进度一条都拉不下来。这里直接拦住。
+      if (syncGistId.value.trim()) {
+        showToast('已填 Gist ID，请点「拉取并接入」，不要新建', 'error', 6000);
+        return;
+      }
+      const localCount = (state.stats && state.stats.total) || 0;
+      if (!localCount) {
+        const ok = confirm(
+          '这台设备还没有任何背诵记录，新建的 Gist 会是空的。\n\n' +
+          '如果你是想把其他设备已有的进度同步过来：\n' +
+          '请把 Gist ID 填到上面的输入框，然后点「拉取并接入」。\n\n' +
+          '确定要新建一个空 Gist 吗？'
+        );
+        if (!ok) return;
+      }
       try {
-        const result = await window.Sync.bindNew(newToken.value);
-        showToast('绑定成功：' + result.username + ' / 上传 ' + result.count + ' 张卡片', 'success', 4000);
-        newToken.value = '';
+        const result = await window.Sync.bindNew(token);
+        showToast('已新建 Gist：' + result.username + ' / 上传 ' + result.count + ' 张卡片', 'success', 4000);
+        syncToken.value = '';
       } catch (e) {
         showToast('绑定失败: ' + e.message, 'error', 5000);
       }
     }
 
-    // 新设备接入（从云端拉取进度）
+    // 接入已有 Gist（其他设备建的，或重装后恢复）
     async function bindExisting() {
-      if (!existToken.value.trim() || !existGistId.value.trim()) {
+      if (!syncToken.value.trim() || !syncGistId.value.trim()) {
         showToast('请输入 Token 和 Gist ID', 'error');
         return;
       }
       try {
-        const result = await window.Sync.bindExisting(existToken.value, existGistId.value);
+        const result = await window.Sync.bindExisting(syncToken.value, syncGistId.value);
         showToast('接入成功，合并后共 ' + result.merged + ' 张卡片', 'success', 4000);
-        existToken.value = '';
-        existGistId.value = '';
+        syncToken.value = '';
+        syncGistId.value = '';
       } catch (e) {
         showToast('接入失败: ' + e.message, 'error', 5000);
       }
@@ -287,9 +303,8 @@ const app = createApp({
       state,
       syncState,
       toast,
-      newToken,
-      existToken,
-      existGistId,
+      syncToken,
+      syncGistId,
       navigate,
       backToDashboard,
       onStudy,
@@ -422,28 +437,29 @@ const app = createApp({
 
           <h3 style="margin-top:20px;">云端同步</h3>
 
-          <!-- 未配置：显示绑定表单 -->
+          <!-- 未配置：显示绑定表单（Token 与 Gist ID 合在一处，避免填错框） -->
           <template v-if="!syncState.configured">
             <div class="sync-block">
-              <div class="sync-block-title">首次绑定（在这台设备创建同步）</div>
-              <input class="sync-input" v-model="newToken" type="password"
-                     placeholder="GitHub Personal Access Token (需 gist 权限)" />
-              <button class="btn-primary" style="width:auto;padding:8px 14px;font-size:13px;"
-                      @click="bindNew" :disabled="syncState.syncing">
-                {{ syncState.syncing ? '绑定中...' : '绑定并上传当前进度' }}
-              </button>
-            </div>
-
-            <div class="sync-block">
-              <div class="sync-block-title">新设备接入（从其他设备拉取进度）</div>
-              <input class="sync-input" v-model="existToken" type="password"
-                     placeholder="GitHub Token" />
-              <input class="sync-input" v-model="existGistId"
-                     placeholder="Gist ID（从已绑定设备获取）" />
-              <button class="btn-secondary" style="width:auto;padding:8px 14px;font-size:13px;"
-                      @click="bindExisting" :disabled="syncState.syncing">
-                {{ syncState.syncing ? '拉取中...' : '拉取并接入' }}
-              </button>
+              <div class="sync-block-title">连接云端同步</div>
+              <input class="sync-input" v-model="syncToken" type="password"
+                     placeholder="GitHub Token（需要 gist 权限）" />
+              <input class="sync-input" v-model="syncGistId"
+                     placeholder="Gist ID —— 已有进度时必填（32 位十六进制）" />
+              <div class="sync-actions">
+                <button class="btn-primary" style="width:auto;padding:8px 14px;font-size:13px;"
+                        @click="bindExisting" :disabled="syncState.syncing">
+                  {{ syncState.syncing ? '同步中...' : '拉取并接入（推荐）' }}
+                </button>
+                <button class="btn-secondary" style="width:auto;padding:8px 14px;font-size:13px;"
+                        @click="bindNew" :disabled="syncState.syncing">
+                  新建 Gist
+                </button>
+              </div>
+              <div class="sync-warn">
+                <b>已有进度</b>（换设备 / 换了网址 / 重装浏览器）→ 填 Gist ID，点「拉取并接入」，云端记录会合并到本机。<br>
+                <b>新建 Gist</b> 只用于第一次启用同步：它会把<b>本机</b>进度写成一份新的云端记录，
+                不会去拉旧 Gist 里的任何东西。
+              </div>
             </div>
 
             <div class="sync-tip">

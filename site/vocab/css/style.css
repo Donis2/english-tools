@@ -750,6 +750,28 @@ html, body {
   color: var(--primary);
 }
 
+.sync-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* 两个按钮的行为差别很大，用一段醒目但不吵的说明把选择讲清楚 */
+.sync-warn {
+  font-size: 11.5px;
+  line-height: 1.75;
+  color: #8a5a00;
+  background: #fffaf0;
+  border: 1px solid #f3e0bd;
+  border-left: 3px solid #d98b00;
+  border-radius: 6px;
+  padding: 9px 11px;
+}
+
+.sync-warn b {
+  color: #7a4e00;
+}
+
 .sync-error {
   color: var(--danger);
   font-size: 12px;
