@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#1a365d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>考研词频背诵</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="css/style.css?v=25">
+</head>
+<body>
+  <div id="app"></div>
+  <script src="js/vendor/vue.global.prod.js"></script>
+  <script src="js/vendor/dexie.min.js"></script>
+  <script src="js/db.js?v=17"></script>
+  <script src="js/scheduler.js?v=11"></script>
+  <script src="js/tts.js?v=12"></script>
+  <script src="js/sync.js?v=20"></script>
+  <script src="js/store.js?v=24"></script>
+  <script src="js/gesture.js?v=2"></script>
+  <script src="js/components/Dashboard.js?v=15"></script>
+  <script src="js/components/CardView.js?v=14"></script>
+  <script src="js/components/ReviewView.js?v=13"></script>
+  <script src="js/components/WordList.js?v=17"></script>
+  <script src="js/app.js?v=21"></script>
+  <script>
+    // 兜底：依赖或数据加载失败时不要留一片空白，给出能照着做的提示
+    window.addEventListener('load', function () {
+      var app = document.getElementById('app');
+      if (!app) return;
+      var missing = [];
+      if (!window.Vue) missing.push('Vue 3');
+      if (!window.Dexie) missing.push('Dexie');
+      if (missing.length) {
+        app.innerHTML =
+          '<div style="padding:48px 24px;font-family:system-ui,-apple-system,sans-serif;line-height:2;color:#1a365d;">' +
+          '<h2 style="font-size:18px;font-weight:600;margin:0 0 12px;">页面没能启动</h2>' +
+          '<p style="margin:0 0 10px;color:#c53030;font-size:14px;">依赖未加载：' + missing.join('、') + '</p>' +
+          '<p style="margin:0 0 10px;color:#4a5568;font-size:14px;">请确认 <code>js/vendor/</code> 目录下的文件完整。</p>' +
+          '<p style="margin:0;color:#4a5568;font-size:14px;">另外，请通过 <b>启动.bat</b> 打开（http 服务），直接双击 index.html 会因为浏览器安全限制读不到词库。</p>' +
+          '</div>';
+      } else if (!app.children.length) {
+        app.innerHTML =
+          '<div style="padding:48px 24px;font-family:system-ui,-apple-system,sans-serif;line-height:2;color:#1a365d;">' +
+          '<h2 style="font-size:18px;font-weight:600;margin:0 0 12px;">页面空白</h2>' +
+          '<p style="margin:0 0 10px;color:#4a5568;font-size:14px;">脚本已加载但没能渲染。请按 F12 打开控制台看第一条红色报错。</p>' +
+          '<p style="margin:0;color:#4a5568;font-size:14px;">常见原因是直接双击了 index.html：词库需要通过 http 读取，请改用 <b>启动.bat</b>。</p>' +
+          '</div>';
+      }
+    });
+
+    // 初始化超时兜底：IndexedDB 被别的标签页占用时，页面会永远停在「加载中」
+    var stuckTimer = setTimeout(function () {
+      var s = window.Store && window.Store.state;
+      if (!s || s.initialized) return;
+      var app = document.getElementById('app');
+      if (!app) return;
+      var blocked = !!window.__dbBlocked;
+      var title = blocked ? '数据被其它窗口占用' : '初始化超时';
+      var tip = blocked
+        ? '本应用的数据存在浏览器本地。检测到另一个标签页（或另一个副本的项目）正在使用同一份数据，导致这次升级被阻塞。<br><br>请关闭其它打开着本应用的标签页，然后刷新本页。'
+        : '词库没能导入完成。首次打开需要把 5463 个单词写入浏览器数据库，通常 1–2 秒即可完成。<br><br>如果长时间无响应，请按 F12 查看控制台第一条红色报错。';
+      app.innerHTML =
+        '<div style="padding:48px 24px;font-family:system-ui,-apple-system,sans-serif;line-height:2;color:#1a365d;">' +
+        '<h2 style="font-size:18px;font-weight:600;margin:0 0 12px;">' + title + '</h2>' +
+        '<p style="margin:0 0 18px;color:#4a5568;font-size:14px;">' + tip + '</p>' +
+        '<button onclick="location.reload()" style="padding:10px 22px;font-size:14px;border:0;border-radius:8px;background:#1a365d;color:#fff;cursor:pointer;">刷新重试</button>' +
+        '<p style="margin:16px 0 0;color:#a0aec0;font-size:12px;">提示：两个副本都用 8090 端口时，浏览器会认为它们是同一个网站，数据会互相干扰。</p>' +
+        '</div>';
+    }, 15000);
+  </script>
+</body>
+</html>

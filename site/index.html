@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>英语工具 · English Tool</title>
+<style>
+:root{
+  --paper:#f1ebe0; --paper-2:#fbf8f2; --card:#fffdf9;
+  --ink:#1e1c18; --ink-soft:#4b463d; --muted:#8b8374;
+  --line:#e0d7c6; --seal:#b23a2f; --seal-dark:#8f2b22; --teal:#0e6f63;
+  --serif:"Songti SC","Source Han Serif SC","Noto Serif SC",Georgia,"Times New Roman",serif;
+  --sans:"PingFang SC","Microsoft YaHei","Hiragino Sans GB",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:var(--sans);color:var(--ink);background:var(--paper);
+  min-height:100vh;-webkit-font-smoothing:antialiased;position:relative;overflow-x:hidden;
+}
+body::before{
+  content:"";position:fixed;inset:0;z-index:-2;
+  background:
+    radial-gradient(1200px 600px at 12% -10%, #fff7ea 0%, transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, #f3ede1 0%, transparent 55%),
+    var(--paper);
+}
+body::after{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.5;
+  background-image:
+    linear-gradient(rgba(120,105,80,.05) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(120,105,80,.05) 1px,transparent 1px);
+  background-size:26px 26px;
+  mask-image:radial-gradient(circle at 50% 20%,#000 0%,transparent 82%);
+  -webkit-mask-image:radial-gradient(circle at 50% 20%,#000 0%,transparent 82%);
+}
+.wrap{max-width:980px;margin:0 auto;padding:52px 26px 70px}
+
+header{display:flex;align-items:flex-start;gap:18px;margin-bottom:26px;animation:rise .55s ease both}
+.seal{
+  flex:0 0 auto;width:54px;height:54px;border-radius:12px;
+  background:linear-gradient(160deg,var(--seal),var(--seal-dark));color:#fff;
+  display:grid;place-items:center;font-family:var(--serif);font-size:25px;
+  box-shadow:0 8px 20px -10px rgba(143,43,34,.75);
+}
+.titles h1{font-family:var(--serif);font-size:31px;margin:0;letter-spacing:2px;font-weight:600}
+.titles p{margin:8px 0 0;color:var(--muted);font-size:14px;letter-spacing:.6px}
+
+/* 常用直达 */
+.quick{
+  display:flex;flex-wrap:wrap;gap:9px;margin:0 0 26px;
+  animation:rise .6s ease .05s both;
+}
+.quick a{
+  display:inline-flex;align-items:center;gap:7px;
+  text-decoration:none;color:var(--ink-soft);background:var(--card);
+  border:1px solid var(--line);border-radius:999px;
+  padding:8px 15px;font-size:13px;letter-spacing:.4px;
+  transition:color .16s,border-color .16s,transform .16s,box-shadow .16s;
+}
+.quick a:hover{color:var(--seal);border-color:#cdbda1;transform:translateY(-1px);
+  box-shadow:0 8px 18px -14px rgba(50,40,25,.7)}
+.quick .dot{width:5px;height:5px;border-radius:50%;background:var(--seal);opacity:.55}
+
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(272px,1fr));gap:18px}
+@media (max-width:720px){ .wrap{padding:32px 16px 50px} .titles h1{font-size:25px} }
+
+.card{
+  display:block;text-decoration:none;color:inherit;background:var(--card);
+  border:1px solid var(--line);border-radius:16px;padding:22px 22px 20px;
+  box-shadow:0 1px 2px rgba(50,40,25,.05),0 14px 34px -22px rgba(50,40,25,.45);
+  transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+  position:relative;overflow:hidden;
+  animation:rise .6s ease both;
+}
+.card:nth-child(2){animation-delay:.06s}
+.card:nth-child(3){animation-delay:.12s}
+.card:hover{transform:translateY(-3px);border-color:#cbbc9f;
+  box-shadow:0 2px 4px rgba(50,40,25,.06),0 22px 40px -24px rgba(50,40,25,.55)}
+.card::after{
+  content:"";position:absolute;inset:auto -30% -60% auto;width:180px;height:180px;
+  border-radius:50%;background:radial-gradient(circle,rgba(178,58,47,.10),transparent 68%);
+}
+.kicker{font-size:12px;letter-spacing:2.4px;color:var(--seal);font-weight:600}
+.card h2{font-family:var(--serif);font-size:23px;margin:10px 0 9px;letter-spacing:1px;font-weight:600}
+.card p{margin:0;color:var(--ink-soft);font-size:13.5px;line-height:1.85}
+.meta{display:flex;align-items:center;justify-content:space-between;margin-top:18px;font-size:12.5px;color:var(--muted)}
+.go{color:var(--teal);font-weight:600;letter-spacing:.5px}
+.card:hover .go{color:var(--seal)}
+
+.note{
+  margin-top:24px;border-left:3px solid var(--seal);background:#fbf4ee;
+  padding:13px 16px;border-radius:0 10px 10px 0;color:var(--ink-soft);
+  font-size:13px;line-height:1.9;
+}
+.note b{color:var(--ink)}
+footer{margin-top:30px;color:var(--muted);font-size:12px;letter-spacing:.5px;line-height:1.9}
+
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="seal">词</div>
+    <div class="titles">
+      <h1>英语工具 · English Tool</h1>
+      <p>背单词和刷真题截图，共用一份词表和同一个浏览器数据库</p>
+    </div>
+  </header>
+
+  <nav class="quick">
+    <a href="vocab/"><span class="dot"></span>今日背诵</a>
+    <a href="vocab/#practice"><span class="dot"></span>实战单词</a>
+    <a href="shot/"><span class="dot"></span>截图取词</a>
+    <a href="vocab/#dashboard"><span class="dot"></span>熟练度总览</a>
+    <a href="novel/" id="quickNovel" hidden><span class="dot"></span>单词小说</a>
+  </nav>
+
+  <div class="cards">
+    <a class="card" href="vocab/">
+      <div class="kicker">日 常 背 诵</div>
+      <h2>考研词频背诵</h2>
+      <p>5463 个大纲词按真题词频排序。每天 50 个新词 + 30 个昨天不会的，6 档熟练度，进度可同步到自己的 GitHub Gist。</p>
+      <div class="meta"><span id="vocabStat">词库 5463</span><span class="go">进入 →</span></div>
+    </a>
+
+    <a class="card" href="shot/">
+      <div class="kicker">刷 题 取 词</div>
+      <h2>截图词频标注</h2>
+      <p>把真题截图丢进去，自动标出大纲词、词频和释义。点单词旁边的 ＋ 就进「实战单词」，同一个词反复加只累计次数。</p>
+      <div class="meta"><span id="practiceStat">实战单词 —</span><span class="go">进入 →</span></div>
+    </a>
+
+    <a class="card" href="novel/" id="novelCard" hidden>
+      <div class="kicker">阅 读 记 词</div>
+      <h2>单词小说</h2>
+      <p>把大纲词写进一部英文异世界连载里，点词即查释义、词频和本章出现次数，边读剧情边把词过一遍。</p>
+      <div class="meta"><span id="novelStat">章节目录</span><span class="go">进入 →</span></div>
+    </a>
+  </div>
+
+  <div class="note">
+    这三个页面在<b>同一个域名</b>下，读写的是同一份 IndexedDB。所以在截图页加的词，回到背诵页的「实战单词」里立刻能看到，不需要同步、不需要联网中转。
+  </div>
+
+  <footer id="foot">建议用 Chrome / Edge 打开；背诵页可以「添加到主屏幕」当 App 用。</footer>
+</div>
+
+<!-- 只为在首页显示几个数字，读的是同一份数据库 -->
+<script src="vocab/js/vendor/dexie.min.js"></script>
+<script src="vocab/js/db.js?v=17"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+
+  try {
+    // 首屏可能还没导入词库（只在背诵页第一次打开时才导），这里先确保有数据
+    var ready = DB.initWordsData ? DB.initWordsData().catch(function () {}) : Promise.resolve();
+
+    ready.then(function () {
+      return DB.getPracticeCount().then(function (n) {
+        $('practiceStat').textContent = '实战单词 ' + (n || 0) + ' 个';
+      });
+    }).catch(function () {});
+
+    ready.then(function () {
+      return DB.getProgress().then(function (s) {
+        if (s && s.total > 0) {
+          $('vocabStat').textContent = s.learned ? ('已学 ' + s.learned + ' / ' + s.total) : ('词库 ' + s.total + ' 词');
+        }
+      });
+    }).catch(function () {});
+  } catch (e) {}
+
+  // 「单词小说」只有本地才有（从旁边的项目目录直接挂载），线上部署不会带
+  fetch('novel/index.html', { method: 'HEAD' })
+    .then(function (r) {
+      if (!r.ok) return;
+      $('novelCard').hidden = false;
+      $('quickNovel').hidden = false;
+      fetch('novel/data/chapters.json')
+        .then(function (r2) { return r2.ok ? r2.json() : null; })
+        .then(function (d) {
+          var n = d && (d.chapters ? d.chapters.length : (Array.isArray(d) ? d.length : 0));
+          if (n) $('novelStat').textContent = '已连载 ' + n + ' 章';
+        })
+        .catch(function () {});
+    })
+    .catch(function () {});
+
+  // 本地访问时补一句提示，免得分不清线上和本机
+  if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+    $('foot').textContent = '本地服务：' + location.origin + ' · 关闭启动窗口即停止。背诵页可以「添加到主屏幕」当 App 用。';
+  }
+})();
+</script>
+</body>
+</html>

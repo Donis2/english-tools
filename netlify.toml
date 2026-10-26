@@ -1,0 +1,10 @@
+[build]
+  publish = "site"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+# 单页应用不需要额外重写；静态目录 site/ 下就是完整站点
+# 部署后在 Netlify 后台配置三个环境变量（OCR 云函数用）：
+#   BAIDU_API_KEY / BAIDU_SECRET_KEY / OCR_SPACE_KEY

@@ -1,0 +1,11 @@
+# 本地环境变量里放的是密钥，别提交
+.env
+API.txt
+
+# Netlify 本地状态
+.netlify/
+
+node_modules/
+_*.js
+
+__pycache__/
