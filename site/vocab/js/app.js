@@ -1,6 +1,6 @@
 // app.js - Vue 应用主入口
 
-const { createApp, onMounted, ref, watch, computed } = Vue;
+const { createApp, onMounted, ref, watch } = Vue;
 
 const app = createApp({
   setup() {
@@ -35,53 +35,6 @@ const app = createApp({
     }
     // 让各组件也能用（WordList 评分后提示"实战单词保留"）
     window.showToast = showToast;
-
-    // ====== 实战单词通道状态 ======
-    // 合并版：两个页面同域，共用同一个 IndexedDB，不需要中转
-    const sameSite = !window.PracticeSync;
-    const practiceSync = window.PracticeSync
-      ? window.PracticeSync.state
-      : { channel: 'local', gistReady: false, lastPull: '', error: '' };
-    const bridgeText = computed(() => {
-      if (sameSite) return '同站直连（截图页与本页共用数据库）';
-      if (practiceSync.channel === 'local') return '本地直连（同一台电脑）';
-      if (practiceSync.channel === 'gist') return '云端 Gist（跨设备）';
-      return '未连接';
-    });
-
-    // 生成一段同步码，粘贴到截图词频标注页面即可连上
-    async function copyPracticeCode() {
-      const code = window.PracticeSync ? window.PracticeSync.generateCode() : '';
-      if (!code) {
-        showToast('请先在下方绑定云端同步（需要 Gist）', 'error', 4000);
-        return;
-      }
-      try {
-        await navigator.clipboard.writeText(code);
-        showToast('同步码已复制，粘贴到截图页面即可', 'success', 3500);
-      } catch (e) {
-        const ta = document.createElement('textarea');
-        ta.value = code;
-        ta.style.position = 'fixed';
-        ta.style.opacity = '0';
-        document.body.appendChild(ta);
-        ta.select();
-        try {
-          document.execCommand('copy');
-          showToast('同步码已复制', 'success', 3000);
-        } catch (e2) {
-          showToast('复制失败，请手动复制：' + code, 'error', 8000);
-        }
-        document.body.removeChild(ta);
-      }
-    }
-
-    async function syncPracticeNow() {
-      if (!window.PracticeSync) return;
-      const r = await window.PracticeSync.pullAll({ force: true });
-      showToast(`实战单词已刷新：新增 ${r.added}，更新 ${r.updated}`, 'info', 3000);
-      if (window.PracticeSync.state.gistReady) window.PracticeSync.pushGist();
-    }
 
     // 新建 Gist（这台设备第一次用，本机进度为源头）
     async function bindNew() {
@@ -279,8 +232,6 @@ const app = createApp({
         window.Sync.registerAutoSync();
       }
       await store.init();
-      // 实战单词接收通道（独立部署时才需要；合并版同域直连，PracticeSync 不存在）
-      if (window.PracticeSync) window.PracticeSync.start();
 
       // 从首页 / 截图页直达实战单词：/vocab/#practice
       if (entryHash === 'practice') {
@@ -320,11 +271,7 @@ const app = createApp({
       bindExisting,
       syncNow,
       unbindSync,
-      copyGistId,
-      practiceSync,
-      bridgeText,
-      copyPracticeCode,
-      syncPracticeNow
+      copyGistId
     };
   },
   template: `
@@ -504,7 +451,7 @@ const app = createApp({
           <h3 style="margin-top:20px;">实战单词</h3>
           <div class="setting-row">
             <label>接收方式</label>
-            <span>{{ bridgeText }}</span>
+            <span>同站直连（截图页与本页共用数据库）</span>
           </div>
           <div class="sync-tip" style="margin-top:8px;">
             回到首页进入「截图词频标注」，点单词旁边的 ＋，这里就会多一条。同一个词反复添加只累计次数，不会重复显示。

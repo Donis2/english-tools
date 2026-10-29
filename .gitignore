@@ -2,6 +2,9 @@
 .env
 API.txt
 
+# 本地手写的进度/凭证备忘，里面有 GitHub Token，别提交
+背诵进度保存.txt
+
 # Netlify 本地状态
 .netlify/
 

@@ -17,11 +17,7 @@ async function getDailyTask() {
 
   // 2. 获取昨天不会的词，随机抽 30 个
   const forgotten = await DB.getYesterdayForgotten();
-  const forgottenWords = [];
-  for (const card of forgotten) {
-    const wordData = await db.words.where('word').equals(card.word).first();
-    if (wordData) forgottenWords.push(wordData);
-  }
+  const forgottenWords = await DB.getWordsByNames(forgotten.map(c => c.word));
 
   // 随机抽 30 个（如果不够 30 个就全取）
   const reviewWords = shuffle(forgottenWords).slice(0, SCHEDULER_CONFIG.reviewFromYesterday);
@@ -40,10 +36,7 @@ async function getReviewTask() {
   const result = { 1: [], 2: [], 3: [], 4: [] };
   for (const prof of [1, 2, 3, 4]) {
     const cards = await DB.getCardsByProficiency(prof);
-    for (const card of cards) {
-      const wordData = await db.words.where('word').equals(card.word).first();
-      if (wordData) result[prof].push(wordData);
-    }
+    result[prof].push(...await DB.getWordsByNames(cards.map(c => c.word)));
   }
   return result;
 }

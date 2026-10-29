@@ -3,6 +3,13 @@
 
 const DB_NAME = 'vocab-pwa-v2';
 
+// 词库路径按脚本自身位置解析。db.js 在 js/ 下，词库在 data/ 下；
+// 直接写 'data/...' 时首页（/）会请求成 /data/... 而 404，只有背诵页（/vocab/）碰巧对。
+const DB_SCRIPT_SRC = (document.currentScript && document.currentScript.src) || '';
+const WORDS_DATA_URL = DB_SCRIPT_SRC
+  ? new URL('../data/netem_full_list.json', DB_SCRIPT_SRC).href
+  : 'data/netem_full_list.json';
+
 const db = new Dexie(DB_NAME);
 
 db.version(1).stores({
@@ -58,7 +65,8 @@ async function initWordsData() {
   }
 
   console.log('[db] 首次启动，开始导入词频数据...');
-  const resp = await fetch('data/netem_full_list.json');
+  const resp = await fetch(WORDS_DATA_URL);
+  if (!resp.ok) throw new Error('词库加载失败：HTTP ' + resp.status + '（' + WORDS_DATA_URL + '）');
   const raw = await resp.json();
 
   const key = Object.keys(raw)[0];
@@ -123,6 +131,16 @@ async function getWordsByRange(fromRank, count) {
     .where('rank')
     .between(fromRank, fromRank + count - 1, true, true)
     .toArray();
+}
+
+// 按单词名批量取词条（保留传入顺序）。逐个 where(...).first() 会变成 N+1 次查询，
+// 列表一长就明显卡；这里一次 anyOf 查回来再按名字映射。
+async function getWordsByNames(names) {
+  const keys = [...new Set((names || []).filter(Boolean))];
+  if (!keys.length) return [];
+  const rows = await db.words.where('word').anyOf(keys).toArray();
+  const byWord = new Map(rows.map(w => [w.word, w]));
+  return (names || []).map(n => byWord.get(n)).filter(Boolean);
 }
 
 // ====== cards 表 CRUD ======
@@ -252,12 +270,7 @@ async function clearTempWords() {
 // 获取临时词对应的完整单词数据（join words 表）
 async function getTempWords() {
   const temps = await db.tempWords.toArray();
-  const words = [];
-  for (const t of temps) {
-    const w = await db.words.where('word').equals(t.word).first();
-    if (w) words.push(w);
-  }
-  return words;
+  return await getWordsByNames(temps.map(t => t.word));
 }
 
 async function getTempCount() {
@@ -461,11 +474,21 @@ async function applyPracticeRemote(snapshot) {
 // 取全部实战单词（join words 表补全释义，join cards 表显示已记入的熟练度）
 async function getPracticeWords() {
   const rows = await db.practiceWords.toArray();
-  const out = [];
-  for (const p of rows) {
-    const w = await db.words.where('word').equals(p.word).first();
-    const card = await db.cards.get(p.word);
-    out.push({
+  if (!rows.length) return [];
+  const keys = rows.map(p => p.word);
+  // 一次批量查词条 + 一次批量查卡片，避免每个词都跑两轮查询
+  const [wordRows, cards] = await Promise.all([
+    db.words.where('word').anyOf(keys).toArray(),
+    db.cards.bulkGet(keys)
+  ]);
+  const wordByKey = new Map(wordRows.map(w => [w.word, w]));
+  const cardByKey = new Map();
+  cards.forEach((c, i) => { if (c) cardByKey.set(keys[i], c); });
+
+  const out = rows.map(p => {
+    const w = wordByKey.get(p.word);
+    const card = cardByKey.get(p.word);
+    return {
       word: p.word,
       rank: w ? w.rank : (p.rank || 99999),
       frequency: w ? w.frequency : (p.freq || 0),
@@ -479,8 +502,8 @@ async function getPracticeWords() {
       practiceLastAt: p.lastAddedAt || 0,
       practiceSource: p.source || '',
       proficiency: card ? card.proficiency : null
-    });
-  }
+    };
+  });
   // 最近加进来的排前面
   out.sort((a, b) => (b.practiceLastAt || 0) - (a.practiceLastAt || 0));
   return out;
@@ -559,12 +582,32 @@ async function getUnlearnedWords(limit) {
 
 // ====== 统计 ======
 
-async function getProgress() {
-  const [total, cards] = await Promise.all([
-    db.words.count(),
-    db.cards.toArray()
-  ]);
+// words 表只读，词频索引建一次就够。以前每次评分后刷新统计都会把 5463 条词条
+// 重新读一遍（约 1.3MB），一天 80 张卡就是 80 次全表扫描；缓存后只剩首次一次。
+let freqIndexPromise = null;
+async function getFrequencyIndex() {
+  if (!freqIndexPromise) {
+    freqIndexPromise = db.words.toArray().then(rows => {
+      const byWord = new Map();
+      let total = 0;
+      for (const w of rows) {
+        const f = w.frequency || 0;
+        byWord.set(w.word, f);
+        total += f;
+      }
+      return { byWord, total };
+    }).catch(e => {
+      freqIndexPromise = null;      // 失败不缓存，下次还能重建
+      throw e;
+    });
+  }
 
+  const idx = await freqIndexPromise;
+  if (!idx.byWord.size) freqIndexPromise = null;   // 词库还没导入，别把空表缓存住
+  return idx;
+}
+
+function buildProgress(total, cards) {
   // proficiency >= 1 才算"已学"（0 表示见过但未评分，不计入已学）
   const learnedCards = cards.filter(c => c.proficiency >= 1);
   const seenCount = cards.filter(c => c.proficiency === 0).length;
@@ -584,25 +627,54 @@ async function getProgress() {
   return stats;
 }
 
-async function getCoverage() {
-  const cards = await db.cards.toArray();
+function buildCoverage(cards, freq) {
   // 见过的词（proficiency >= 0）都算覆盖，因为用户已经接触过
   const learnedWords = new Set(cards.map(c => c.word));
+  let coveredFrequency = 0;
+  for (const w of learnedWords) coveredFrequency += freq.byWord.get(w) || 0;
 
-  const allWords = await db.words.toArray();
-  const totalFrequency = allWords.reduce((sum, w) => sum + (w.frequency || 0), 0);
-  const coveredFrequency = allWords
-    .filter(w => learnedWords.has(w.word))
-    .reduce((sum, w) => sum + (w.frequency || 0), 0);
-
-  const coveragePercent = totalFrequency > 0
-    ? (coveredFrequency / totalFrequency * 100).toFixed(1)
+  const coveragePercent = freq.total > 0
+    ? parseFloat((coveredFrequency / freq.total * 100).toFixed(1))
     : 0;
 
   return {
     coveredCount: learnedWords.size,
-    totalFrequency,
-    coveragePercent: parseFloat(coveragePercent)
+    totalFrequency: freq.total,
+    coveragePercent
+  };
+}
+
+async function getProgress() {
+  const [total, cards] = await Promise.all([
+    db.words.count(),
+    db.cards.toArray()
+  ]);
+  return buildProgress(total, cards);
+}
+
+async function getCoverage() {
+  const [cards, freq] = await Promise.all([
+    db.cards.toArray(),
+    getFrequencyIndex()
+  ]);
+  return buildCoverage(cards, freq);
+}
+
+// 首页统计一次取全：cards 只读一次，刷新时不用再分别跑 getProgress / getCoverage
+async function getStats() {
+  const [total, cards, tempCount, practiceCount, freq] = await Promise.all([
+    db.words.count(),
+    db.cards.toArray(),
+    db.tempWords.count(),
+    db.practiceWords.count(),
+    getFrequencyIndex()
+  ]);
+
+  return {
+    stats: buildProgress(total, cards),
+    coverage: buildCoverage(cards, freq),
+    tempCount,
+    practiceCount
   };
 }
 
@@ -662,6 +734,7 @@ window.DB = {
   formatDefinition,
   initWordsData,
   getWordsByRange,
+  getWordsByNames,
   getCardsByProficiency,
   setProficiency,
   markSeen,
@@ -669,6 +742,7 @@ window.DB = {
   getUnlearnedWords,
   getProgress,
   getCoverage,
+  getStats,
   repairInvalidProficiency,
   resetProgress,
   exportData,

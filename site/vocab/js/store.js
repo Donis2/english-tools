@@ -175,10 +175,11 @@ const Store = {
   },
 
   async refreshStats() {
-    this.state.stats = await DB.getProgress();
-    this.state.coverage = await DB.getCoverage();
-    this.state.tempCount = await DB.getTempCount();
-    this.state.practiceCount = await DB.getPracticeCount();
+    const s = await DB.getStats();
+    this.state.stats = s.stats;
+    this.state.coverage = s.coverage;
+    this.state.tempCount = s.tempCount;
+    this.state.practiceCount = s.practiceCount;
   },
 
   async startStudy() {
@@ -323,12 +324,7 @@ const Store = {
       this.state.wordList = await DB.getUnlearnedWords(200);
     } else {
       const cards = await DB.getCardsByProficiency(proficiency);
-      const words = [];
-      for (const card of cards) {
-        const w = await db.words.where('word').equals(card.word).first();
-        if (w) words.push(w);
-      }
-      this.state.wordList = words;
+      this.state.wordList = await DB.getWordsByNames(cards.map(c => c.word));
     }
   },
 
@@ -381,7 +377,6 @@ const Store = {
     if (this.state.wordListProf === 'practice') {
       await this.loadWordList('practice');
     }
-    if (window.PracticeSync) window.PracticeSync.pushGist();
     return rec;
   },
 
@@ -391,7 +386,6 @@ const Store = {
     if (this.state.wordListProf === 'practice') {
       await this.loadWordList('practice');
     }
-    if (window.PracticeSync) window.PracticeSync.pushGist();
   },
 
   async clearPractice() {
@@ -400,7 +394,6 @@ const Store = {
     if (this.state.wordListProf === 'practice') {
       await this.loadWordList('practice');
     }
-    if (window.PracticeSync) window.PracticeSync.pushGist({ replace: true });
   },
 
   // 粘贴导入：接受截图工具复制的 JSON，也接受一行一个词的纯文本
@@ -416,19 +409,7 @@ const Store = {
     if (this.state.wordListProf === 'practice') {
       await this.loadWordList('practice');
     }
-    if (window.PracticeSync) window.PracticeSync.pushGist();
     return { added: seen.size };
-  },
-
-  // 同步通道收到新词时的回调
-  onPracticeIncoming(added) {
-    this.refreshStats();
-    if (this.state.wordListProf === 'practice') {
-      this.loadWordList('practice');
-    }
-    if (added > 0 && window.showToast) {
-      window.showToast(`收到 ${added} 个实战单词`, 'success', 2600);
-    }
   },
 
   // 导航到指定页面，同时更新浏览器历史（让物理返回键能回退）
@@ -472,22 +453,17 @@ const Store = {
     const cards = await db.cards.where('firstLearned').equals(today).toArray();
     if (cards.length === 0) return null;
 
-    const words = [];
-    for (const card of cards) {
-      const w = await db.words.where('word').equals(card.word).first();
-      if (w) {
-        words.push({
-          word: w.word,
-          rank: w.rank,
-          frequency: w.frequency,
-          definition: w.definition,
-          variant: w.variant,
-          category: w.category,
-          subcategory: w.subcategory,
-          proficiency: card.proficiency
-        });
-      }
-    }
+    const cardByWord = new Map(cards.map(c => [c.word, c]));
+    const words = (await DB.getWordsByNames(cards.map(c => c.word))).map(w => ({
+      word: w.word,
+      rank: w.rank,
+      frequency: w.frequency,
+      definition: w.definition,
+      variant: w.variant,
+      category: w.category,
+      subcategory: w.subcategory,
+      proficiency: cardByWord.get(w.word).proficiency
+    }));
     // 按词频排名升序（高频词在前）
     words.sort((a, b) => (a.rank || 0) - (b.rank || 0));
     return { date: today, words };
@@ -499,24 +475,22 @@ const Store = {
     const result = {};
     for (const prof of profs) {
       const cards = await db.cards.where('proficiency').equals(prof).toArray();
-      const words = [];
-      for (const card of cards) {
-        const w = await db.words.where('word').equals(card.word).first();
-        if (w) {
-          words.push({
-            word: w.word,
-            rank: w.rank,
-            frequency: w.frequency,
-            definition: w.definition,
-            variant: w.variant,
-            category: w.category,
-            subcategory: w.subcategory,
-            proficiency: card.proficiency,
-            firstLearned: card.firstLearned,
-            lastReview: card.lastReview
-          });
-        }
-      }
+      const cardByWord = new Map(cards.map(c => [c.word, c]));
+      const words = (await DB.getWordsByNames(cards.map(c => c.word))).map(w => {
+        const card = cardByWord.get(w.word);
+        return {
+          word: w.word,
+          rank: w.rank,
+          frequency: w.frequency,
+          definition: w.definition,
+          variant: w.variant,
+          category: w.category,
+          subcategory: w.subcategory,
+          proficiency: card.proficiency,
+          firstLearned: card.firstLearned,
+          lastReview: card.lastReview
+        };
+      });
       // 按词频排名升序
       words.sort((a, b) => (a.rank || 0) - (b.rank || 0));
       result[prof] = words;
