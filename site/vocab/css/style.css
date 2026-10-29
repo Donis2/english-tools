@@ -903,17 +903,23 @@ html, body {
       "coverage coverage"
       "task1 task2"
       "task3 task4"
+      "task5 task5"
       "wordlists wordlists";
     gap: 16px;
     align-content: start;
   }
-  /* dashboard 子元素顺序：coverage, task1, task2, task3(导出今日), task4(按熟练度导出), wordlists */
+  /* dashboard 子元素顺序：coverage、主任务、第二任务、词群背诵、
+     导出今日词汇、按熟练度导出、熟练度词表 */
   .dashboard > :nth-child(1) { grid-area: coverage; }
   .dashboard > :nth-child(2) { grid-area: task1; }
   .dashboard > :nth-child(3) { grid-area: task2; }
   .dashboard > :nth-child(4) { grid-area: task3; }
   .dashboard > :nth-child(5) { grid-area: task4; }
-  .dashboard > :nth-child(6) { grid-area: wordlists; }
+  .dashboard > :nth-child(6) { grid-area: task5; }
+  .dashboard > :nth-child(7) { grid-area: wordlists; }
+  .wordlists-section {
+    width: 100%;
+  }
   .wordlists-grid {
     grid-template-columns: repeat(4, 1fr);
   }
