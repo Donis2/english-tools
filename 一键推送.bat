@@ -85,12 +85,22 @@ echo.
 echo   Pushing to GitHub ...
 if "%DRY%"=="1" (
   git push --dry-run
+  if errorlevel 1 (
+    echo.
+    echo   [ERROR] Cannot connect to GitHub.
+    echo   If you use a proxy/VPN, start it first.
+    echo   Check proxy setting: git config --get http.proxy
+    if "%NOPAUSE%"=="0" pause
+    exit /b 1
+  )
   echo   [dry-run] Checked only. Nothing was pushed.
 ) else (
   git push -u origin "%BRANCH%"
   if errorlevel 1 (
     echo.
     echo   [ERROR] git push failed. Check network, login and permissions.
+    echo   If you use a proxy/VPN, start it first.
+    echo   Check proxy setting: git config --get http.proxy
     pause
     exit /b 1
   )
