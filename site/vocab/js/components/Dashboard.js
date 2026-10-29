@@ -268,6 +268,13 @@ const Dashboard = {
         <button class="btn-secondary" @click="startReview">开始复习</button>
       </div>
 
+      <!-- 词群背诵 Beta -->
+      <div class="task-card">
+        <div class="task-title">词群背诵 <span class="beta-badge">Beta</span></div>
+        <div class="task-desc">近义词、易混词、同词根词族成组背；支持遮释义、词频筛选、乱序和错题回队。不占每日 50+30 的任务。</div>
+        <button class="btn-secondary" @click="$emit('clusters')">进入词群背诵</button>
+      </div>
+
       <!-- 导出今日词汇 -->
       <div class="task-card">
         <div class="task-title">导出今日词汇</div>

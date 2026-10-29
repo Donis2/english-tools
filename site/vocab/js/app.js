@@ -240,12 +240,21 @@ const app = createApp({
         try { history.replaceState({ page: 'wordlist' }, '', '#wordlist'); } catch (e) {}
       }
 
+      // 直接打开 /vocab/#clusters 时恢复词群辨析页
+      if (entryHash === 'clusters') {
+        store.navigate('clusters', true);
+        try { history.replaceState({ page: 'clusters' }, '', '#clusters'); } catch (e) {}
+      }
+
       // 已经在这个页面里时再改 hash（比如从浏览器收藏点 #practice），不会重新加载，
       // 所以单独监听一次。
       window.addEventListener('hashchange', async () => {
         if (location.hash === '#practice' && store.state.wordListProf !== 'practice') {
           await store.loadWordList('practice');
           store.navigate('wordlist', true);
+        }
+        if (location.hash === '#clusters' && store.state.currentPage !== 'clusters') {
+          store.navigate('clusters', true);
         }
       });
     });
@@ -304,6 +313,11 @@ const app = createApp({
               首页
             </button>
             <button class="nav-tab"
+                    :class="{ active: state.currentPage === 'clusters' }"
+                    @click="navigate('clusters')">
+              词群
+            </button>
+            <button class="nav-tab"
                     :class="{ active: state.currentPage === 'settings' }"
                     @click="navigate('settings')">
               设置
@@ -315,6 +329,7 @@ const app = createApp({
         <dashboard v-if="state.currentPage === 'dashboard'"
                    @study="onStudy"
                    @review="onReview"
+                   @clusters="navigate('clusters')"
                    @wordlist="onWordList">
         </dashboard>
 
@@ -325,6 +340,10 @@ const app = createApp({
         <review-view v-else-if="state.currentPage === 'review'"
                      @back="backToDashboard">
         </review-view>
+
+        <cluster-view v-else-if="state.currentPage === 'clusters'"
+                     @back="backToDashboard">
+        </cluster-view>
 
         <word-list v-else-if="state.currentPage === 'wordlist'"
                    @back="backToDashboard">
@@ -489,6 +508,7 @@ const app = createApp({
 app.component('dashboard', window.Dashboard);
 app.component('card-view', window.CardView);
 app.component('review-view', window.ReviewView);
+app.component('cluster-view', window.ClusterView);
 app.component('word-list', window.WordList);
 
 // 挂载
