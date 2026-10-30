@@ -316,16 +316,28 @@ const Store = {
 
   async loadWordList(proficiency) {
     this.state.wordListProf = proficiency;
+    let list;
     if (proficiency === 'temp') {
-      this.state.wordList = await DB.getTempWords();
+      list = await DB.getTempWords();
     } else if (proficiency === 'practice') {
-      this.state.wordList = await DB.getPracticeWords();
+      list = await DB.getPracticeWords();
     } else if (proficiency === 0) {
-      this.state.wordList = await DB.getUnlearnedWords(200);
+      list = await DB.getUnlearnedWords(200);
     } else {
       const cards = await DB.getCardsByProficiency(proficiency);
-      this.state.wordList = await DB.getWordsByNames(cards.map(c => c.word));
+      list = await DB.getWordsByNames(cards.map(c => c.word));
     }
+
+    // 其他词表也标出「这个单词进过实战单词」，次数取实战表的累计值
+    if (proficiency !== 'practice') {
+      const counts = await DB.getPracticeCounts();
+      list = list.map(w => ({
+        ...w,
+        practiceCount: counts[DB.normalizePracticeWord(w.word)] || 0
+      }));
+    }
+
+    this.state.wordList = list;
   },
 
   async changeProficiency(word, newProf) {

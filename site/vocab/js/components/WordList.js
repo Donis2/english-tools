@@ -388,6 +388,10 @@ const WordList = {
         <div v-if="isPracticeProf" class="practice-mini">
           加入 <b>{{ currentWord.practiceCount }}</b> 次<template v-if="currentWord.practiceLastAt"> · 最近 {{ fmtDate(currentWord.practiceLastAt) }}</template><template v-if="currentWord.proficiency !== null && currentWord.proficiency !== undefined"> · 已记入：{{ profLabel(currentWord) }}</template>
         </div>
+        <!-- 其他熟练度：提示这个词也进过实战单词 -->
+        <div v-else-if="currentWord.practiceCount" class="practice-mini">
+          已在实战单词 · 累计 <b>{{ currentWord.practiceCount }}</b> 次
+        </div>
 
         <!-- 发音按钮 -->
         <button class="speak-btn-large" @click="speakWord" title="朗读单词">
@@ -449,6 +453,8 @@ const WordList = {
                 {{ word.word }}
                 <span v-if="isPracticeProf && word.practiceCount > 1" class="practice-count"
                       :title="'被添加了 ' + word.practiceCount + ' 次'">×{{ word.practiceCount }}</span>
+                <span v-if="!isPracticeProf && word.practiceCount" class="practice-badge"
+                      :title="'已加入实战单词 ' + word.practiceCount + ' 次'">实战 ×{{ word.practiceCount }}</span>
                 <button class="speak-mini" @click.stop="speak(word.word)" title="朗读">🔊</button>
               </div>
               <div class="word-def">{{ previewDef(word.definition, word.word) }}</div>
