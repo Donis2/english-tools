@@ -504,7 +504,14 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 <script src="ocr.js"></script>
 <!-- 同域共用背单词的数据库：实战单词直接写进 IndexedDB -->
 <script src="../vocab/js/vendor/dexie.min.js"></script>
-<script src="../vocab/js/db.js?v=17"></script>
+<script src="../vocab/js/db.js?v=20"></script>
+<!-- 截图页也要加载同步模块，否则在这里加的实战单词只会留在本机 -->
+<script src="../vocab/js/sync.js?v=21"></script>
+<script>
+if (window.Sync && typeof window.Sync.registerAutoSync === 'function') {
+  window.Sync.registerAutoSync();
+}
+</script>
 <script>
 const $ = s => document.querySelector(s);
 const drop=$('#drop'), thumbsEl=$('#thumbs'), placeholder=$('#placeholder'),

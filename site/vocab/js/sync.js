@@ -20,14 +20,19 @@ const GIST_API = 'https://api.github.com/gists';
 const SYNC_FILE_NAME = 'progress.json';
 const SYNC_DEBOUNCE_MS = 1500;
 
+const syncState = {
+  configured: false,    // 是否已绑定（token + gistId 都有）
+  syncing: false,       // 是否正在同步
+  lastSync: null,       // 上次同步时间字符串
+  error: null,          // 最近一次错误信息
+  gistId: ''            // 当前 Gist ID
+};
+
 const Sync = {
-  state: Vue.reactive({
-    configured: false,    // 是否已绑定（token + gistId 都有）
-    syncing: false,       // 是否正在同步
-    lastSync: null,       // 上次同步时间字符串
-    error: null,          // 最近一次错误信息
-    gistId: ''            // 当前 Gist ID
-  }),
+  // 背单词页有 Vue，用响应式状态；截图页不加载 Vue，用普通对象即可
+  state: (typeof Vue !== 'undefined' && typeof Vue.reactive === 'function')
+    ? Vue.reactive(syncState)
+    : syncState,
 
   _debounceTimer: null,
 
@@ -452,13 +457,11 @@ const Sync = {
       return;
     }
     console.log('[sync] 启动拉取完成，合并 ' + pullResult.changed + ' 张卡片，本地新增 ' + pullResult.localOnly + ' 张');
-    // 只有本地有远端没有的 card 时才需要 push
-    let pushOk = true;
-    if (pullResult.localOnly > 0) {
-      const pushResult = await this.pushLocal(true);
-      pushOk = pushResult.ok;
-      if (pushResult.ok) console.log('[sync] 启动推送完成');
-    }
+    // 拉取后总是推送一次：本地新增的实战单词/临时词也要上传，
+    // 不能只在“有本地独有卡片”时才推送。
+    const pushResult = await this.pushLocal(true);
+    const pushOk = pushResult.ok;
+    if (pushResult.ok) console.log('[sync] 启动推送完成');
     if (window.Store) await window.Store.refreshStats();
     if (onResult) onResult({
       ok: pushOk,
