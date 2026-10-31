@@ -224,6 +224,9 @@ const Dashboard = {
       { value: 'temp', name: '临时', desc: '复制暂存，不动原熟练度' }
     ];
 
+    // 未学习单独放，其余熟练度排在顶部
+    const studiedLevels = profLevels.filter(level => level.value !== 0);
+
     return {
       state: store.state,
       startStudy,
@@ -240,7 +243,8 @@ const Dashboard = {
       isProfSelected,
       openProfExportModal,
       closeProfExportModal,
-      profLevels
+      profLevels,
+      studiedLevels
     };
   },
   template: `
@@ -251,6 +255,27 @@ const Dashboard = {
         <div class="coverage-label">真题文本覆盖率</div>
         <div style="font-size:12px;opacity:0.8;margin-top:8px;">
           已学习 {{ state.stats.learned }} / {{ state.stats.total }} 词
+        </div>
+      </div>
+
+      <!-- 熟练度词表入口（置顶） -->
+      <div class="wordlists-section">
+        <div class="section-title">
+          <span>熟练度词表</span>
+          <button class="unlearned-link" @click="viewWordList(0)">
+            未学习 {{ getProfCount(0) }} 词 →
+          </button>
+        </div>
+        <div class="wordlists-grid">
+          <div v-for="level in studiedLevels"
+               :key="level.value"
+               class="wordlist-card"
+               :style="{ borderLeftColor: getProfColor(level.value) }"
+               @click="viewWordList(level.value)">
+            <div class="wordlist-name">{{ level.name }}</div>
+            <div class="wordlist-count">{{ getProfCount(level.value) }}</div>
+            <div class="wordlist-desc">{{ level.desc }}</div>
+          </div>
         </div>
       </div>
 
@@ -287,22 +312,6 @@ const Dashboard = {
         <div class="task-title">按熟练度导出</div>
         <div class="task-desc">导出已学单词，按熟练度分组（6 档可选），适合针对性复习或让 DeepSeek 改写。</div>
         <button class="btn-secondary" @click="openProfExportModal">按熟练度导出</button>
-      </div>
-
-      <!-- 熟练度词表入口 -->
-      <div class="wordlists-section">
-        <div class="section-title">熟练度词表</div>
-        <div class="wordlists-grid">
-          <div v-for="level in profLevels"
-               :key="level.value"
-               class="wordlist-card"
-               :style="{ borderLeftColor: getProfColor(level.value) }"
-               @click="viewWordList(level.value)">
-            <div class="wordlist-name">{{ level.name }}</div>
-            <div class="wordlist-count">{{ getProfCount(level.value) }} 词</div>
-            <div class="wordlist-desc">{{ level.desc }}</div>
-          </div>
-        </div>
       </div>
 
       <!-- 按熟练度导出弹窗 -->
@@ -350,12 +359,12 @@ const Dashboard = {
     },
     getProfColor(prof) {
       const colors = {
-        0: '#a0aec0', 1: '#e53e3e', 2: '#dd6b20', 3: '#d69e2e',
-        4: '#3182ce', 5: '#38a169', 6: '#2f855a',
-        practice: '#319795',
-        temp: '#805ad5'
+        0: '#7d8ca6', 1: '#e11d48', 2: '#a855f7', 3: '#7c3aed',
+        4: '#0284c7', 5: '#2563eb', 6: '#4338ca',
+        practice: '#0284c7',
+        temp: '#7c3aed'
       };
-      return colors[prof] || '#a0aec0';
+      return colors[prof] || '#7d8ca6';
     }
   }
 };

@@ -34,19 +34,19 @@ const WordList = {
     };
 
     const profColors = {
-      0: '#a0aec0', 1: '#e53e3e', 2: '#dd6b20', 3: '#d69e2e',
-      4: '#3182ce', 5: '#38a169', 6: '#2f855a',
-      temp: '#805ad5', practice: '#319795'
+      0: '#7d8ca6', 1: '#e11d48', 2: '#a855f7', 3: '#7c3aed',
+      4: '#0284c7', 5: '#2563eb', 6: '#4338ca',
+      temp: '#7c3aed', practice: '#0284c7'
     };
 
     // 6档熟练度
     const proficiencyLevels = [
-      { value: 1, name: '完全不熟悉', desc: '根本没印象', color: '#e53e3e' },
-      { value: 2, name: '熟悉但不记得', desc: '感觉背过但不记得', color: '#dd6b20' },
-      { value: 3, name: '看了才记住', desc: '看中文才想起', color: '#d69e2e' },
-      { value: 4, name: '勉强记住', desc: '想一会儿才想起', color: '#3182ce' },
-      { value: 5, name: '正常记住', desc: '偶尔忘记瞄两眼就想起', color: '#38a169' },
-      { value: 6, name: '完全记住', desc: 'am/the 这种基础词', color: '#2f855a' }
+      { value: 1, name: '完全不熟悉', desc: '根本没印象', color: '#e11d48' },
+      { value: 2, name: '熟悉但不记得', desc: '感觉背过但不记得', color: '#a855f7' },
+      { value: 3, name: '看了才记住', desc: '看中文才想起', color: '#7c3aed' },
+      { value: 4, name: '勉强记住', desc: '想一会儿才想起', color: '#0284c7' },
+      { value: 5, name: '正常记住', desc: '偶尔忘记瞄两眼就想起', color: '#2563eb' },
+      { value: 6, name: '完全记住', desc: 'am/the 这种基础词', color: '#4338ca' }
     ];
 
     // 筛选后的词表
@@ -367,8 +367,7 @@ const WordList = {
              @touchend.passive="onTouchEnd">
           <div class="card-face">
             <div class="card-word">{{ currentWord.word }}</div>
-            <div class="card-rank">词频排名 #{{ currentWord.rank }}</div>
-            <div class="card-frequency">真题出现 {{ currentWord.frequency }} 次</div>
+            <div class="card-frequency">词频 {{ currentWord.frequency }} 次</div>
             <div class="card-hint">点击卡片查看释义</div>
           </div>
           <div class="card-face card-back">
@@ -459,7 +458,7 @@ const WordList = {
               </div>
               <div class="word-def">{{ previewDef(word.definition, word.word) }}</div>
               <div class="word-meta">
-                <span>词频 #{{ word.rank }}</span>
+                <span>词频 {{ word.frequency }} 次</span>
                 <span v-if="word.category"> · {{ word.category }}</span>
               </div>
             </div>

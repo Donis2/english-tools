@@ -61,12 +61,12 @@ const ReviewView = {
     }
 
     const proficiencyLevels = [
-      { value: 1, name: '完全不熟悉', color: '#e53e3e' },
-      { value: 2, name: '熟悉但不记得', color: '#dd6b20' },
-      { value: 3, name: '看了才记住', color: '#d69e2e' },
-      { value: 4, name: '勉强记住', color: '#3182ce' },
-      { value: 5, name: '正常记住', color: '#38a169' },
-      { value: 6, name: '完全记住', color: '#2f855a' }
+      { value: 1, name: '完全不熟悉', color: '#e11d48' },
+      { value: 2, name: '熟悉但不记得', color: '#a855f7' },
+      { value: 3, name: '看了才记住', color: '#7c3aed' },
+      { value: 4, name: '勉强记住', color: '#0284c7' },
+      { value: 5, name: '正常记住', color: '#2563eb' },
+      { value: 6, name: '完全记住', color: '#4338ca' }
     ];
 
     // 格式化释义：按词性分行
@@ -115,8 +115,7 @@ const ReviewView = {
            @touchend.passive="onTouchEnd">
         <div class="card-face">
           <div class="card-word">{{ getCurrentCard().wordData.word }}</div>
-          <div class="card-rank">词频排名 #{{ getCurrentCard().wordData.rank }}</div>
-          <div class="card-frequency">真题出现 {{ getCurrentCard().wordData.frequency }} 次</div>
+          <div class="card-rank">词频 {{ getCurrentCard().wordData.frequency }} 次</div>
           <div class="card-hint">点击卡片查看释义</div>
         </div>
         <div class="card-face card-back">

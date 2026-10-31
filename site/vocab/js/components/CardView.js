@@ -63,12 +63,12 @@ const CardView = {
     });
 
     const proficiencyLevels = [
-      { value: 1, name: '完全不熟悉', desc: '根本没印象', color: '#e53e3e' },
-      { value: 2, name: '熟悉但不记得', desc: '感觉背过但不记得', color: '#dd6b20' },
-      { value: 3, name: '看了才记住', desc: '看中文才想起', color: '#d69e2e' },
-      { value: 4, name: '勉强记住', desc: '想一会儿才想起', color: '#3182ce' },
-      { value: 5, name: '正常记住', desc: '偶尔忘记瞄两眼就想起', color: '#38a169' },
-      { value: 6, name: '完全记住', desc: 'am/the 这种基础词', color: '#2f855a' }
+      { value: 1, name: '完全不熟悉', desc: '根本没印象', color: '#e11d48' },
+      { value: 2, name: '熟悉但不记得', desc: '感觉背过但不记得', color: '#a855f7' },
+      { value: 3, name: '看了才记住', desc: '看中文才想起', color: '#7c3aed' },
+      { value: 4, name: '勉强记住', desc: '想一会儿才想起', color: '#0284c7' },
+      { value: 5, name: '正常记住', desc: '偶尔忘记瞄两眼就想起', color: '#2563eb' },
+      { value: 6, name: '完全记住', desc: 'am/the 这种基础词', color: '#4338ca' }
     ];
 
     return {
@@ -113,8 +113,7 @@ const CardView = {
         <!-- 正面：单词 -->
         <div class="card-face">
           <div class="card-word">{{ state.currentCard.wordData.word }}</div>
-          <div class="card-rank">词频排名 #{{ state.currentCard.wordData.rank }}</div>
-          <div class="card-frequency">真题出现 {{ state.currentCard.wordData.frequency }} 次</div>
+          <div class="card-frequency">词频 {{ state.currentCard.wordData.frequency }} 次</div>
           <div class="card-hint">点击卡片查看释义</div>
         </div>
         <!-- 背面：释义 -->

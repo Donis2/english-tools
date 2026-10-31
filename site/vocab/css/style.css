@@ -1,17 +1,22 @@
 /* style.css - 全局样式 */
 
 :root {
-  --primary: #1a365d;
-  --primary-light: #2c5282;
-  --accent: #3182ce;
-  --success: #38a169;
-  --warning: #d69e2e;
-  --danger: #e53e3e;
-  --bg: #f7fafc;
+  --primary: #1a2b4a;
+  --primary-light: #2c3e5c;
+  --accent: #3b82f6;
+  --accent-deep: #2563eb;
+  --accent-soft: #e7f0ff;
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #ef4444;
+  --bg: #f5f9ff;
   --card-bg: #ffffff;
-  --text: #2d3748;
-  --text-light: #718096;
-  --border: #e2e8f0;
+  --text: #1a2b4a;
+  --text-light: #7d8ca6;
+  --border: #e1eaf7;
+  --border-strong: #c9d8ef;
+  --shadow: 0 18px 45px rgba(26,43,74,.10);
+  --shadow-soft: 0 8px 24px rgba(26,43,74,.06);
 }
 
 * {
@@ -29,11 +34,20 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
+body {
+  background:
+    radial-gradient(900px 520px at 96% -8%, rgba(59,130,246,.14), transparent 62%),
+    radial-gradient(760px 520px at -6% 12%, rgba(139,92,246,.10), transparent 58%),
+    radial-gradient(640px 460px at 52% 104%, rgba(56,189,248,.10), transparent 62%),
+    var(--bg);
+  background-attachment: fixed;
+}
+
 #app {
   max-width: 600px;
   margin: 0 auto;
   min-height: 100vh;
-  background: var(--bg);
+  background: transparent;
 }
 
 /* ====== 顶部导航 ====== */
@@ -41,9 +55,11 @@ html, body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px 16px;
-  background: var(--primary);
-  color: white;
+  padding: 12px 16px;
+  background: rgba(255,255,255,.86);
+  backdrop-filter: blur(14px);
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -51,7 +67,9 @@ html, body {
 
 .nav-title {
   font-size: 17px;
-  font-weight: 600;
+  font-weight: 700;
+  color: var(--primary);
+  letter-spacing: -.01em;
 }
 
 .nav-tabs {
@@ -61,18 +79,22 @@ html, body {
 
 .nav-tab {
   padding: 6px 14px;
-  background: rgba(255,255,255,0.1);
-  border: none;
-  color: rgba(255,255,255,0.7);
-  border-radius: 16px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-light);
+  border-radius: 999px;
   font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
   cursor: pointer;
   transition: all 0.2s;
 }
 
+.nav-tab:hover { color: var(--accent-deep); background: var(--accent-soft); }
+
 .nav-tab.active {
-  background: white;
-  color: var(--primary);
+  background: var(--primary);
+  color: white;
   font-weight: 600;
 }
 
@@ -82,38 +104,41 @@ html, body {
 }
 
 .coverage-card {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
-  color: white;
+  background: linear-gradient(145deg, #eaf2ff 0%, #ffffff 100%);
+  color: var(--text);
   padding: 24px;
-  border-radius: 16px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
   text-align: center;
   margin-bottom: 16px;
-  box-shadow: 0 4px 12px rgba(26, 54, 93, 0.2);
+  box-shadow: var(--shadow-soft);
 }
 
 .coverage-number {
   font-size: 42px;
   font-weight: 700;
   line-height: 1;
+  color: var(--accent);
 }
 
 .coverage-label {
   font-size: 13px;
-  opacity: 0.9;
+  color: var(--text-light);
   margin-top: 6px;
 }
 
 .task-card {
   background: var(--card-bg);
-  padding: 18px;
-  border-radius: 12px;
+  padding: 18px 20px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
   margin-bottom: 12px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  box-shadow: var(--shadow-soft);
 }
 
 .task-title {
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 6px;
 }
 
@@ -129,7 +154,7 @@ html, body {
   width: 100%;
   padding: 12px;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
@@ -139,16 +164,17 @@ html, body {
 .btn-primary {
   background: var(--accent);
   color: white;
+  box-shadow: 0 12px 24px rgba(59,130,246,.22);
 }
 
-.btn-primary:hover { background: var(--primary); }
+.btn-primary:hover { background: var(--accent-deep); }
 
 .btn-secondary {
-  background: #edf2f7;
-  color: var(--primary);
+  background: var(--accent-soft);
+  color: var(--accent-deep);
 }
 
-.btn-secondary:hover { background: #e2e8f0; }
+.btn-secondary:hover { background: #dbe8ff; }
 
 .btn-danger {
   background: var(--danger);
@@ -157,30 +183,57 @@ html, body {
 
 /* ====== 熟练度词表卡片 ====== */
 .wordlists-section {
-  margin-top: 24px;
+  margin-top: 0;
+  margin-bottom: 12px;
 }
 
 .section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 700;
   margin-bottom: 10px;
   color: var(--text);
+}
+
+.unlearned-link {
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255,255,255,.7);
+  color: var(--text-light);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .2s;
+  white-space: nowrap;
+}
+
+.unlearned-link:hover {
+  color: var(--accent-deep);
+  border-color: var(--border-strong);
 }
 
 .wordlists-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 8px;
 }
 
 .wordlist-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   background: var(--card-bg);
-  padding: 14px;
-  border-radius: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
   border-left: 4px solid;
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 2px rgba(26,43,74,.04);
 }
 
 .wordlist-card:active {
@@ -188,20 +241,25 @@ html, body {
 }
 
 .wordlist-name {
-  font-size: 14px;
-  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 13.5px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .wordlist-count {
-  font-size: 22px;
+  font-size: 15px;
   font-weight: 700;
-  color: var(--primary);
-  margin: 4px 0;
+  color: var(--text-light);
+  margin: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 .wordlist-desc {
-  font-size: 11px;
-  color: var(--text-light);
+  display: none;
 }
 
 /* ====== 卡片学习 ====== */
@@ -383,7 +441,7 @@ html, body {
   justify-content: center;
   gap: 8px;
   padding: 12px 14px;
-  background: #805ad5;
+  background: #7c3aed;
 }
 .temp-prof-btn .prof-desc {
   margin-top: 0;
@@ -791,9 +849,6 @@ html, body {
   .prof-btn {
     padding: 12px 6px;
   }
-  .wordlists-grid {
-    grid-template-columns: 1fr;
-  }
   .card-word {
     font-size: 36px;
   }
@@ -901,22 +956,22 @@ html, body {
     grid-template-columns: 1fr 1fr;
     grid-template-areas:
       "coverage coverage"
+      "wordlists wordlists"
       "task1 task2"
       "task3 task4"
-      "task5 task5"
-      "wordlists wordlists";
+      "task5 task5";
     gap: 16px;
     align-content: start;
   }
-  /* dashboard 子元素顺序：coverage、主任务、第二任务、词群背诵、
-     导出今日词汇、按熟练度导出、熟练度词表 */
+  /* dashboard 子元素顺序：coverage、熟练度词表、主任务、第二任务、词群背诵、
+     导出今日词汇、按熟练度导出 */
   .dashboard > :nth-child(1) { grid-area: coverage; }
-  .dashboard > :nth-child(2) { grid-area: task1; }
-  .dashboard > :nth-child(3) { grid-area: task2; }
-  .dashboard > :nth-child(4) { grid-area: task3; }
-  .dashboard > :nth-child(5) { grid-area: task4; }
-  .dashboard > :nth-child(6) { grid-area: task5; }
-  .dashboard > :nth-child(7) { grid-area: wordlists; }
+  .dashboard > :nth-child(2) { grid-area: wordlists; }
+  .dashboard > :nth-child(3) { grid-area: task1; }
+  .dashboard > :nth-child(4) { grid-area: task2; }
+  .dashboard > :nth-child(5) { grid-area: task3; }
+  .dashboard > :nth-child(6) { grid-area: task4; }
+  .dashboard > :nth-child(7) { grid-area: task5; }
   .wordlists-section {
     width: 100%;
   }
