@@ -195,9 +195,9 @@ header{display:flex;align-items:flex-start;gap:20px;margin-bottom:30px;animation
 .hit:hover{background:#fdf1ef}
 .hit sup{font-size:.6em;font-family:var(--mono);font-weight:700;vertical-align:super;
   margin-left:1px;letter-spacing:0}
-.hit.t-high{text-decoration-color:var(--seal)}   .hit.t-high sup{color:var(--seal)}
-.hit.t-mid{text-decoration-color:var(--amber)}   .hit.t-mid sup{color:var(--amber)}
-.hit.t-low{text-decoration-color:var(--teal)}    .hit.t-low sup{color:var(--teal)}
+.hit.t-high{text-decoration-color:#b23a2f}   .hit.t-high sup{color:#b23a2f}
+.hit.t-mid{text-decoration-color:#c8791f}   .hit.t-mid sup{color:#c8791f}
+.hit.t-low{text-decoration-color:#0e6f63}    .hit.t-low sup{color:#0e6f63}
 
 .imgbox{padding:16px 20px 4px}
 .imgbox img{width:100%;border:1px solid var(--line);border-radius:10px}
@@ -219,9 +219,9 @@ td.w .speak{width:26px;height:26px;border-radius:7px;margin-left:8px}
 td.w .speak svg{width:14px;height:14px}
 .m-word .speak{width:38px;height:38px;margin-left:12px;border-radius:10px}
 .rank{display:inline-block;font-family:var(--serif);color:var(--muted);font-size:12px;margin-left:7px}
-td.freq{font-family:var(--mono);font-size:13px;color:var(--ink-soft);white-space:nowrap}
+td.freq{font-family:var(--mono);font-size:13px;color:#4b463d;white-space:nowrap}
 td.mean{color:var(--ink-soft);line-height:1.65;max-width:520px}
-.forms{font-size:12px;color:var(--amber);white-space:nowrap}
+.forms{font-size:12px;color:#c8791f;white-space:nowrap}
 .forms.none{color:#c3bbab}
 .tablewrap{padding:4px 12px 16px;overflow-x:auto}
 .vocab{padding:4px 20px 16px}
@@ -307,7 +307,7 @@ td.mean{color:var(--ink-soft);line-height:1.65;max-width:520px}
   border:1px solid var(--line);background:var(--paper-2);cursor:pointer;font-size:17px;color:var(--muted)}
 .modal .close:hover{color:var(--seal);border-color:var(--seal)}
 .m-word{font-family:var(--serif);font-size:38px;font-weight:700;letter-spacing:.5px}
-.m-word sup{font-size:.42em;font-family:var(--mono);vertical-align:super;margin-left:5px;color:var(--seal)}
+.m-word sup{font-size:.42em;font-family:var(--mono);vertical-align:super;margin-left:5px;color:#b23a2f}
 .m-meta{display:flex;gap:22px;margin:18px 0 4px;flex-wrap:wrap}
 .m-meta div{font-size:12px;color:var(--muted);letter-spacing:1px}
 .m-meta b{display:block;font-family:var(--serif);font-size:22px;color:var(--ink);margin-top:3px;font-weight:700}
@@ -534,7 +534,7 @@ if(TOUCH){
   pastehint.textContent = '平板上建议点上方截图框从相册 / 文件选图；长按粘贴框也可以粘贴。';
 }
 
-const TIER = {high:'#e11d48', mid:'#7c3aed', low:'#2563eb'};
+const TIER = {high:'#b23a2f', mid:'#c8791f', low:'#0e6f63'};
 let queue = [];          // {id, file, url}
 let uid = 0;
 let running = false;
