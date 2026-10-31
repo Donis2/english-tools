@@ -3,7 +3,7 @@
 const CardView = {
   name: 'CardView',
   setup(props, { emit }) {
-    const { watch, computed } = Vue;
+    const { watch, computed, ref } = Vue;
     const store = window.Store;
 
     function flipCard() {
@@ -49,6 +49,7 @@ const CardView = {
     watch(
       () => store.state.currentCard,
       (newCard) => {
+        showExample.value = false;
         if (newCard && newCard.wordData) {
           setTimeout(() => TTS.speak(newCard.wordData.word), 150);
         }
@@ -60,6 +61,18 @@ const CardView = {
       if (!store.state.currentCard) return '';
       const wd = store.state.currentCard.wordData;
       return DB.formatDefinition(wd.definition, wd.word);
+    });
+
+    // 例句弹层：点按钮打开，点任意处关闭
+    const showExample = ref(false);
+
+    // 真题例句：有就展示，没有就不占位
+    const example = computed(() => {
+      const card = store.state.currentCard;
+      const list = card && card.wordData && store.state.examples
+        ? store.state.examples[String(card.wordData.word || '').toLowerCase()]
+        : null;
+      return list && list[0] ? list[0] : null;
     });
 
     const proficiencyLevels = [
@@ -85,7 +98,9 @@ const CardView = {
       onCardClick,
       addTemp,
       proficiencyLevels,
-      formattedDef
+      formattedDef,
+      example,
+      showExample
     };
   },
   template: `
@@ -120,6 +135,7 @@ const CardView = {
         <div class="card-face card-back">
           <div class="card-word card-word-back">{{ state.currentCard.wordData.word }}</div>
           <div class="card-definition" :style="{ textAlign: state.settings.defAlign }"><span class="def-inner">{{ formattedDef }}</span></div>
+          <button class="example-link" v-if="example" @click.stop="showExample = true">例句</button>
           <div class="card-variant" v-if="state.currentCard.wordData.variant">
             其他拼写：{{ state.currentCard.wordData.variant }}
           </div>
@@ -172,6 +188,11 @@ const CardView = {
           下一个 →
         </button>
       </div>
+
+      <example-modal v-if="showExample"
+                     :word="state.currentCard.wordData.word"
+                     :example="example"
+                     @close="showExample = false"></example-modal>
     </div>
 
     <!-- 完成页面 -->

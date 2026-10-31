@@ -510,6 +510,7 @@ app.component('card-view', window.CardView);
 app.component('review-view', window.ReviewView);
 app.component('cluster-view', window.ClusterView);
 app.component('word-list', window.WordList);
+app.component('example-modal', window.ExampleModal);
 
 // 挂载
 app.mount('#app');

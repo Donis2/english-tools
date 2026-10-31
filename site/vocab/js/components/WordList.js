@@ -72,6 +72,19 @@ const WordList = {
       return DB.formatDefinition(currentWord.value.definition, currentWord.value.word);
     });
 
+    // 真题例句：有就展示
+    const example = computed(() => {
+      const w = currentWord.value;
+      const list = w && store.state.examples
+        ? store.state.examples[String(w.word || '').toLowerCase()]
+        : null;
+      return list && list[0] ? list[0] : null;
+    });
+
+    // 例句弹层：点按钮打开，点任意处关闭
+    const showExample = ref(false);
+    watch(currentIndex, () => { showExample.value = false; });
+
     // 当前是否为「临时」词表
     const isTempProf = computed(() => store.state.wordListProf === 'temp');
 
@@ -275,6 +288,8 @@ const WordList = {
       profColors,
       proficiencyLevels,
       formattedDef,
+      example,
+      showExample,
       isTempProf,
       isPracticeProf,
       isTemp,
@@ -373,6 +388,7 @@ const WordList = {
           <div class="card-face card-back">
             <div class="card-word" style="font-size:24px;">{{ currentWord.word }}</div>
             <div class="card-definition" :style="{ textAlign: state.settings.defAlign }"><span class="def-inner">{{ formattedDef }}</span></div>
+            <button class="example-link" v-if="example" @click.stop="showExample = true">例句</button>
             <div class="card-variant" v-if="currentWord.variant">
               其他拼写：{{ currentWord.variant }}
             </div>
@@ -524,6 +540,10 @@ const WordList = {
           </div>
         </div>
       </div>
+      <example-modal v-if="showExample"
+                     :word="currentWord.word"
+                     :example="example"
+                     @close="showExample = false"></example-modal>
     </div>
   `
 };

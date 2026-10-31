@@ -87,11 +87,25 @@ const Store = {
     coverage: { coveredCount: 0, totalFrequency: 0, coveragePercent: 0 },
     tempCount: 0,
     practiceCount: 0,
+    examples: {},
 
     settings: {
       defAlign: (function() { try { return localStorage.getItem('setting_defAlign') || 'center'; } catch(e) { return 'center'; } })()
     }
   }),
+
+  // 真题例句：静态 JSON，加载失败不影响背词主流程
+  async loadExamples() {
+    try {
+      const res = await fetch('data/examples.json?v=2');
+      if (!res.ok) return;
+      const data = await res.json();
+      this.state.examples = (data && data.words) || {};
+      console.log('[store] 例句已加载:', Object.keys(this.state.examples).length);
+    } catch (e) {
+      console.warn('[store] 例句加载失败:', e);
+    }
+  },
 
   async init() {
     try {
@@ -116,6 +130,9 @@ const Store = {
       // 先标记初始化完成，让用户立即看到首页（不阻塞 UI）
       this.state.initialized = true;
       console.log('[store] 初始化完成');
+
+      // 异步加载真题例句，不阻塞首屏
+      this.loadExamples();
 
       // 异步触发云端同步，不阻塞页面渲染
       // 同步完成后：如果拉到了远端 study_progress，重新加载到 state

@@ -370,6 +370,127 @@ body {
   margin-top: 6px;
 }
 
+/* 例句入口与例句小卡片 */
+.example-link {
+  margin-top: 12px;
+  padding: 6px 16px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .18s, border-color .18s;
+}
+
+.example-link:hover {
+  border-color: var(--accent);
+}
+
+.example-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 30, 60, .38);
+}
+
+.example-modal-card {
+  position: relative;
+  width: min(560px, 100%);
+  padding: 30px 24px 22px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: var(--shadow);
+  text-align: left;
+  cursor: pointer;
+}
+
+/* 例句里的可点单词 + 释义浮层 */
+.ex-word {
+  padding: 0 1px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background .15s;
+}
+
+.ex-word:hover { background: var(--accent-soft); }
+.ex-word.active { background: #dbe8ff; }
+
+.ex-tip {
+  position: absolute;
+  z-index: 2;
+  max-width: 200px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(26,43,74,.18);
+  transform: translate(-50%, -100%);
+  margin-top: -6px;
+  pointer-events: none;
+  text-align: left;
+}
+
+.ex-tip-word {
+  color: var(--accent-deep);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ex-tip-def {
+  margin-top: 1px;
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.ex-tip-note {
+  margin-top: 3px;
+  color: var(--text-light);
+  font-size: 10px;
+}
+
+.example-modal-head {
+  margin-bottom: 10px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.example-modal-en {
+  margin-top: 6px;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.example-modal-zh {
+  margin-top: 8px;
+  color: var(--text-light);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.example-modal-src {
+  margin-top: 10px;
+  color: var(--text-light);
+  font-size: 11px;
+  opacity: .8;
+}
+
+.example-modal-hint {
+  margin-top: 14px;
+  color: var(--text-light);
+  font-size: 11px;
+  text-align: center;
+}
+
 /* ====== 发音按钮 ====== */
 .speak-btn-large {
   display: inline-flex;

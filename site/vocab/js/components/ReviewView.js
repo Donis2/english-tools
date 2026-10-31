@@ -3,7 +3,7 @@
 const ReviewView = {
   name: 'ReviewView',
   setup(props, { emit }) {
-    const { watch, computed } = Vue;
+    const { watch, computed, ref } = Vue;
     const store = window.Store;
 
     // 复习队列用 reviewQueue
@@ -76,6 +76,21 @@ const ReviewView = {
       return DB.formatDefinition(card.wordData.definition, card.wordData.word);
     });
 
+    // 例句弹层：点按钮打开，点任意处关闭
+    const showExample = ref(false);
+
+    // 真题例句：有就展示
+    const example = computed(() => {
+      const card = getCurrentCard();
+      const list = card && card.wordData && store.state.examples
+        ? store.state.examples[String(card.wordData.word || '').toLowerCase()]
+        : null;
+      return list && list[0] ? list[0] : null;
+    });
+
+    // 切到下一张时关掉例句弹层
+    watch(() => store.state.reviewIndex, () => { showExample.value = false; });
+
     return {
       state: store.state,
       getCurrentCard,
@@ -89,7 +104,9 @@ const ReviewView = {
       addTemp,
       speakWord,
       proficiencyLevels,
-      formattedDef
+      formattedDef,
+      example,
+      showExample
     };
   },
   template: `
@@ -121,6 +138,7 @@ const ReviewView = {
         <div class="card-face card-back">
           <div class="card-word" style="font-size:24px;">{{ getCurrentCard().wordData.word }}</div>
           <div class="card-definition" :style="{ textAlign: state.settings.defAlign }"><span class="def-inner">{{ formattedDef }}</span></div>
+          <button class="example-link" v-if="example" @click.stop="showExample = true">例句</button>
           <div class="card-variant" v-if="getCurrentCard().wordData.variant">
             其他拼写：{{ getCurrentCard().wordData.variant }}
           </div>
@@ -157,6 +175,11 @@ const ReviewView = {
               style="background:none;border:none;color:var(--text-light);cursor:pointer;font-size:13px;">
         跳过
       </button>
+
+      <example-modal v-if="showExample"
+                     :word="getCurrentCard().wordData.word"
+                     :example="example"
+                     @close="showExample = false"></example-modal>
     </div>
 
     <!-- 完成页面 -->

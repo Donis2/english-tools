@@ -139,6 +139,8 @@ header{display:flex;align-items:flex-start;gap:20px;margin-bottom:30px;animation
 .btn.ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line);
   box-shadow:none;width:auto;padding:9px 15px;font-size:13px;letter-spacing:.5px;font-weight:500}
 .btn.ghost:hover:not(:disabled){background:var(--paper-2);border-color:var(--muted);transform:none}
+.btn.ghost.danger{color:#b23a2f;border-color:#edcfca;background:#fdf1ef}
+.btn.ghost.danger:hover:not(:disabled){background:#b23a2f;color:#fff;border-color:#b23a2f}
 .btn.ghost.mini{padding:6px 12px;font-size:12px}
 .row-between{display:flex;gap:10px;align-items:center}
 .foot-note{margin:14px 4px 0;font-size:12px;color:var(--muted);line-height:1.7}
@@ -376,7 +378,11 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 .pv-plus{margin-left:5px;border:1px solid var(--line);background:#f3f7f5;color:var(--teal);
   border-radius:6px;font-size:11px;line-height:18px;padding:0 6px;cursor:pointer;vertical-align:1px}
 .pv-plus:hover{background:var(--teal);color:#fff;border-color:var(--teal)}
-.pv-plus.on{background:#eaf4f2;border-color:var(--teal)}
+.pv-plus.on{background:var(--teal);color:#fff;border-color:var(--teal);font-weight:700}
+.pv-minus{display:none;margin-left:4px;border:1px solid #edcfca;background:#fdf1ef;color:#b23a2f;
+  border-radius:6px;font-size:11px;line-height:18px;padding:0 7px;cursor:pointer;vertical-align:1px}
+.pv-minus.on{display:inline-block}
+.pv-minus:hover{background:#b23a2f;color:#fff;border-color:#b23a2f}
 .pv-count{font-size:11px;color:var(--teal);margin-left:3px;letter-spacing:.2px}
 .m-practice{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line);
   display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -452,7 +458,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
         </div>
         <div class="filter-row">
           <span>只显示词频 ≤</span>
-          <input type="number" id="freqMax" min="0" step="1" placeholder="不限"
+          <input type="number" id="freqMax" min="0" step="1" value="200" placeholder="不限"
                  aria-label="词频上限，超过此值的单词不再高亮">
           <button class="clear-f" id="freqClear" hidden type="button">清除</button>
           <span class="tag" id="filterState"></span>
@@ -948,9 +954,24 @@ function pvPaint() {
   document.querySelectorAll('[data-practice]').forEach(btn => {
     const n = pvCounts.get(String(btn.dataset.practice).toLowerCase()) || 0;
     btn.classList.toggle('on', n > 0);
+    btn.textContent = n > 0 ? '✓' : '＋';
+    btn.title = n > 0 ? '已在实战单词，再点累计 +1' : '加入实战单词';
     const cnt = btn.nextElementSibling;
     if (cnt && cnt.classList.contains('pv-count')) cnt.textContent = n ? '×' + n : '';
   });
+  // 已加入的词才显示「移除」按钮
+  document.querySelectorAll('[data-practice-remove]').forEach(btn => {
+    const n = pvCounts.get(String(btn.dataset.practiceRemove).toLowerCase()) || 0;
+    btn.classList.toggle('on', n > 0);
+  });
+  // 详情弹窗里的按钮也同步状态
+  const detailBtn = document.querySelector('[data-practice-detail]');
+  const detailRm = document.querySelector('[data-practice-detail-remove]');
+  if (detailBtn && curDetailWord) {
+    const n = pvCounts.get(String(curDetailWord.word).toLowerCase()) || 0;
+    detailBtn.textContent = n > 0 ? `✓ 已在实战单词（${n}）· 再点累计` : '＋ 加入实战单词';
+    if (detailRm) detailRm.hidden = n === 0;
+  }
   const note = document.querySelector('.m-practice .pv-note');
   if (note && curDetailWord) note.textContent = pvNote(curDetailWord.word);
 }
@@ -993,6 +1014,18 @@ function pvAdd(word) {
   return pvQueue;
 }
 
+async function pvRemove(word) {
+  const key = String(word || '').toLowerCase();
+  if (!key || !pvAvailable()) return;
+  try {
+    await DB.removePracticeWord(word);
+    await pvRefreshCounts();
+    flashHint(`已从实战单词移除 ${word}`);
+  } catch (e) {
+    flashHint('移除失败：' + (e.message || e), true);
+  }
+}
+
 /* 点右上角的状态：直接去背单词的实战单词列表 */
 document.addEventListener('click', e => {
   if (e.target.closest('#pvBridge')) {
@@ -1019,19 +1052,22 @@ function blockInner(data, name, no, total){
     : `<div class="content"><div class="olabel">原文重现</div>
          <p class="oline" style="color:var(--muted)">（这张图没有识别到文字）</p></div>`;
 
-  const rows = words.map(w=>`
+  const rows = words.map(w=>{
+    const pv = pvCounts.get(w.word.toLowerCase()) || 0;
+    return `
     <tr>
       <td class="w" data-w="${JSON.stringify(w).replace(/"/g,'&quot;')}">
         <span class="dot" style="background:${TIER[w.tier]||'#999'}"></span>${escapeHtml(w.word)}
         <span class="rank">#${w.rank}</span>
-        <button class="speak" data-speak="${escapeHtml(w.word)}" title="朗读" aria-label="朗读 ${escapeHtml(w.word)}">${SPEAK_ICON}</button><button class="pv-plus${pvCounts.get(w.word.toLowerCase()) ? ' on' : ''}" data-practice="${escapeHtml(w.word)}" title="加入实战单词" aria-label="加入实战单词">＋</button><span class="pv-count">${pvCounts.get(w.word.toLowerCase()) ? '×' + pvCounts.get(w.word.toLowerCase()) : ''}</span></td>
+        <button class="speak" data-speak="${escapeHtml(w.word)}" title="朗读" aria-label="朗读 ${escapeHtml(w.word)}">${SPEAK_ICON}</button><button class="pv-plus${pv ? ' on' : ''}" data-practice="${escapeHtml(w.word)}" title="${pv ? '已在实战单词，再点累计 +1' : '加入实战单词'}" aria-label="加入实战单词">${pv ? '✓' : '＋'}</button><span class="pv-count">${pv ? '×' + pv : ''}</span><button class="pv-minus${pv ? ' on' : ''}" data-practice-remove="${escapeHtml(w.word)}" title="从实战单词移除" aria-label="从实战单词移除">−</button></td>
       <td class="freq">${w.freq}</td>
       <td class="mean">${escapeHtml(w.meaning)}</td>
       <td class="${w.inflected ? 'forms' : 'forms none'}">
         ${w.inflected ? escapeHtml(w.forms.join(', ')) : '原形'}</td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 
-  const filterNote = freqMax === null ? '' : `（词频 ≤ ${freqMax}，共 ${all.length} 个）`;
+  const filterNote = freqMax === null ? '' : `（词频 ≤ ${freqMax}）`;
   const vocab = all.length
     ? `<details class="vocab"${freqMax !== null ? ' open' : ''}>
          <summary>词汇表 · ${words.length} 个词 ${filterNote}</summary>
@@ -1198,11 +1234,19 @@ document.addEventListener('mousedown', ()=>tip.classList.remove('show'));
 
 /* ================= 详情弹窗 ================= */
 document.addEventListener('click', async e=>{
+  /* ---- 从实战单词移除 ---- */
+  const rmBtn = e.target.closest('[data-practice-remove]');
+  if(rmBtn){ e.preventDefault(); e.stopPropagation(); pvRemove(rmBtn.dataset.practiceRemove); return; }
+
   /* ---- 加入实战单词 ---- */
   const pvBtn = e.target.closest('[data-practice]');
   if(pvBtn){ e.preventDefault(); e.stopPropagation(); pvAdd(pvBtn.dataset.practice); return; }
   if(e.target.closest('[data-practice-detail]')){
     if(curDetailWord) pvAdd(curDetailWord.word);
+    return;
+  }
+  if(e.target.closest('[data-practice-detail-remove]')){
+    if(curDetailWord) pvRemove(curDetailWord.word);
     return;
   }
 
@@ -1297,6 +1341,7 @@ function speak(text){
 function openDetail(w){
   tip.classList.remove('show');
   curDetailWord = w;
+  const pv = pvCounts.get(String(w.word).toLowerCase()) || 0;
   mbody.innerHTML = `
     <div class="m-word">${escapeHtml(w.word)}<sup>${w.freq}</sup><button class="speak" data-speak="${escapeHtml(w.word)}" title="朗读" aria-label="朗读 ${escapeHtml(w.word)}">${SPEAK_ICON}</button></div>
     <div class="m-meta">
@@ -1315,7 +1360,8 @@ function openDetail(w){
       ${w.alt ? `<div><b>其他拼写：</b>${escapeHtml(w.alt)}</div>` : ''}
     </div>
     <div class="m-practice">
-      <button class="btn sm" data-practice-detail="1">＋ 加入实战单词</button>
+      <button class="btn sm" data-practice-detail="1">${pv ? `✓ 已在实战单词（${pv}）· 再点累计` : '＋ 加入实战单词'}</button>
+      <button class="btn sm ghost danger" data-practice-detail-remove="1" ${pv ? '' : 'hidden'}>− 从实战单词移除</button>
       <span class="pv-note">${pvNote(w.word)}</span>
     </div>`;
   overlay.hidden = false;
@@ -1346,6 +1392,8 @@ OcrApp.onProgress(m => {
 initEngines();
 /* 读一次实战单词的累计次数，把已经有记录的词标出来 */
 pvRefreshCounts();
+/* 默认词频上限 200：只显示 ≤200 的词（所有声明完成之后再调用） */
+applyFreqFilter();
 </script>
 </body>
 </html>
