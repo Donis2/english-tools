@@ -359,12 +359,12 @@ const Dashboard = {
     },
     getProfColor(prof) {
       const colors = {
-        0: '#7d8ca6', 1: '#e11d48', 2: '#a855f7', 3: '#7c3aed',
-        4: '#0284c7', 5: '#2563eb', 6: '#4338ca',
-        practice: '#0284c7',
+        0: '#8a93a2', 1: '#dc2626', 2: '#ea580c', 3: '#b45309',
+        4: '#0d9488', 5: '#2563eb', 6: '#16a34a',
+        practice: '#0891b2',
         temp: '#7c3aed'
       };
-      return colors[prof] || '#7d8ca6';
+      return colors[prof] || '#8a93a2';
     }
   }
 };

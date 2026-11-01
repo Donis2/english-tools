@@ -61,12 +61,12 @@ const ReviewView = {
     }
 
     const proficiencyLevels = [
-      { value: 1, name: '完全不熟悉', color: '#e11d48' },
-      { value: 2, name: '熟悉但不记得', color: '#a855f7' },
-      { value: 3, name: '看了才记住', color: '#7c3aed' },
-      { value: 4, name: '勉强记住', color: '#0284c7' },
+      { value: 1, name: '完全不熟悉', color: '#dc2626' },
+      { value: 2, name: '熟悉但不记得', color: '#ea580c' },
+      { value: 3, name: '看了才记住', color: '#b45309' },
+      { value: 4, name: '勉强记住', color: '#0d9488' },
       { value: 5, name: '正常记住', color: '#2563eb' },
-      { value: 6, name: '完全记住', color: '#4338ca' }
+      { value: 6, name: '完全记住', color: '#16a34a' }
     ];
 
     // 格式化释义：按词性分行

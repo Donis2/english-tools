@@ -355,12 +355,12 @@ const app = createApp({
             <label>释义对齐方式</label>
             <div style="display:flex;gap:6px;">
               <button class="nav-tab"
-                      :style="{ background: state.settings.defAlign === 'left' ? 'var(--accent)' : '#edf2f7', color: state.settings.defAlign === 'left' ? 'white' : 'var(--primary)' }"
+                      :style="{ background: state.settings.defAlign === 'left' ? 'var(--accent)' : '#eef3fe', color: state.settings.defAlign === 'left' ? 'white' : 'var(--accent-deep)' }"
                       @click="updateSetting('defAlign', 'left')">
                 左对齐
               </button>
               <button class="nav-tab"
-                      :style="{ background: state.settings.defAlign === 'center' ? 'var(--accent)' : '#edf2f7', color: state.settings.defAlign === 'center' ? 'white' : 'var(--primary)' }"
+                      :style="{ background: state.settings.defAlign === 'center' ? 'var(--accent)' : '#eef3fe', color: state.settings.defAlign === 'center' ? 'white' : 'var(--accent-deep)' }"
                       @click="updateSetting('defAlign', 'center')">
                 居中
               </button>

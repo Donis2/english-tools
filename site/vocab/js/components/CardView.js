@@ -76,12 +76,12 @@ const CardView = {
     });
 
     const proficiencyLevels = [
-      { value: 1, name: '完全不熟悉', desc: '根本没印象', color: '#e11d48' },
-      { value: 2, name: '熟悉但不记得', desc: '感觉背过但不记得', color: '#a855f7' },
-      { value: 3, name: '看了才记住', desc: '看中文才想起', color: '#7c3aed' },
-      { value: 4, name: '勉强记住', desc: '想一会儿才想起', color: '#0284c7' },
+      { value: 1, name: '完全不熟悉', desc: '根本没印象', color: '#dc2626' },
+      { value: 2, name: '熟悉但不记得', desc: '感觉背过但不记得', color: '#ea580c' },
+      { value: 3, name: '看了才记住', desc: '看中文才想起', color: '#b45309' },
+      { value: 4, name: '勉强记住', desc: '想一会儿才想起', color: '#0d9488' },
       { value: 5, name: '正常记住', desc: '偶尔忘记瞄两眼就想起', color: '#2563eb' },
-      { value: 6, name: '完全记住', desc: 'am/the 这种基础词', color: '#4338ca' }
+      { value: 6, name: '完全记住', desc: 'am/the 这种基础词', color: '#16a34a' }
     ];
 
     return {
