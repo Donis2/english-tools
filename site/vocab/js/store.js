@@ -263,8 +263,16 @@ const Store = {
       clearStudyProgress();
       return;
     }
-    this.state.currentCard = this.state.queue[this.state.queueIndex];
+    const card = this.state.queue[this.state.queueIndex];
+    this.state.currentCard = card;
     this.state.flipped = false;
+    // 标出这个词是否在「实战单词」里添加过、加了几次
+    if (card && card.wordData) {
+      const count = await DB.getPracticeWordCount(card.wordData.word);
+      if (this.state.currentCard === card) {
+        card.wordData.practiceCount = count;
+      }
+    }
   },
 
   flip() {
@@ -326,7 +334,15 @@ const Store = {
       return false;
     }
 
-    this.state.reviewQueue = allWords;
+    // 复习卡片同样标出「实战单词」添加记录
+    const counts = await DB.getPracticeCounts();
+    this.state.reviewQueue = allWords.map(c => ({
+      ...c,
+      wordData: {
+        ...c.wordData,
+        practiceCount: counts[DB.normalizePracticeWord(c.wordData.word)] || 0
+      }
+    }));
     this.state.reviewIndex = 0;
     return true;
   },

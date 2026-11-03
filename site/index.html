@@ -68,6 +68,11 @@ header{display:flex;align-items:flex-start;gap:18px;margin-bottom:28px;animation
 .card:nth-child(3){animation-delay:.12s}
 .card:hover{transform:translateY(-3px);border-color:#d5dbe6;
   box-shadow:0 1px 2px rgba(17,24,39,.04), 0 20px 40px -22px rgba(17,24,39,.32)}
+/* 顶部细色条：给三张入口卡一点颜色，但不抢内容 */
+.card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,var(--seal),#7dabfa);opacity:.9}
+.card:nth-child(2)::before{background:linear-gradient(90deg,#0d9488,#4fd1c5)}
+.card:nth-child(3)::before{background:linear-gradient(90deg,#7c3aed,#a78bfa)}
 .kicker{font-size:12.5px;letter-spacing:2px;color:var(--seal-dark);font-weight:700}
 .card h2{font-size:23px;margin:11px 0 10px;letter-spacing:-.015em;font-weight:800;color:var(--ink)}
 .card p{margin:0;color:var(--ink-soft);font-size:14.5px;line-height:1.85}

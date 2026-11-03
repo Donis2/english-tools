@@ -88,12 +88,19 @@ const ReviewView = {
       return list && list[0] ? list[0] : null;
     });
 
+    // 这个词在「实战单词」里加过几次（0 = 没加过）
+    const practiceCount = computed(() => {
+      const card = getCurrentCard();
+      return card && card.wordData ? (card.wordData.practiceCount || 0) : 0;
+    });
+
     // 切到下一张时关掉例句弹层
     watch(() => store.state.reviewIndex, () => { showExample.value = false; });
 
     return {
       state: store.state,
       getCurrentCard,
+      practiceCount,
       flip,
       rate,
       skip,
@@ -133,6 +140,7 @@ const ReviewView = {
         <div class="card-face">
           <div class="card-word">{{ getCurrentCard().wordData.word }}</div>
           <div class="card-rank">词频 {{ getCurrentCard().wordData.frequency }} 次</div>
+          <div v-if="practiceCount" class="card-practice">实战单词 · 加过 {{ practiceCount }} 次</div>
           <div class="card-hint">点击卡片查看释义</div>
         </div>
         <div class="card-face card-back">

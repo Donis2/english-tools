@@ -75,6 +75,12 @@ const CardView = {
       return list && list[0] ? list[0] : null;
     });
 
+    // 这个词在「实战单词」里加过几次（0 = 没加过）
+    const practiceCount = computed(() => {
+      const card = store.state.currentCard;
+      return card && card.wordData ? (card.wordData.practiceCount || 0) : 0;
+    });
+
     const proficiencyLevels = [
       { value: 1, name: '完全不熟悉', desc: '根本没印象', color: '#dc2626' },
       { value: 2, name: '熟悉但不记得', desc: '感觉背过但不记得', color: '#ea580c' },
@@ -100,6 +106,7 @@ const CardView = {
       proficiencyLevels,
       formattedDef,
       example,
+      practiceCount,
       showExample
     };
   },
@@ -129,6 +136,7 @@ const CardView = {
         <div class="card-face">
           <div class="card-word">{{ state.currentCard.wordData.word }}</div>
           <div class="card-frequency">词频 {{ state.currentCard.wordData.frequency }} 次</div>
+          <div v-if="practiceCount" class="card-practice">实战单词 · 加过 {{ practiceCount }} 次</div>
           <div class="card-hint">点击卡片查看释义</div>
         </div>
         <!-- 背面：释义 -->

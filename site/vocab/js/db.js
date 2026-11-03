@@ -526,6 +526,12 @@ async function getPracticeCounts() {
   return map;
 }
 
+// 单个单词在实战表里的累计添加次数（背诵卡片上显示用）
+async function getPracticeWordCount(word) {
+  const rec = await db.practiceWords.get(normalizePracticeWord(word));
+  return rec ? (rec.addCount || 1) : 0;
+}
+
 // 导出给同步模块用：把本地实战单词转成「云端格式」的 map
 async function getPracticeMap() {
   const rows = await db.practiceWords.toArray();
@@ -762,6 +768,7 @@ window.DB = {
   mergePracticeWords,
   getPracticeWords,
   getPracticeCount,
+  getPracticeWordCount,
   getPracticeWordSet,
   getPracticeCounts,
   getPracticeMap,

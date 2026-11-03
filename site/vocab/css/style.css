@@ -105,29 +105,101 @@ body {
 
 .coverage-card {
   background: var(--card-bg);
-  color: var(--text);
-  padding: 26px 24px 22px;
-  border-radius: 20px;
+  padding: 18px 20px;
+  border-radius: 18px;
   border: 1px solid var(--border);
-  text-align: center;
   margin-bottom: 18px;
   box-shadow: var(--shadow-soft);
 }
 
-.coverage-number {
-  font-size: 46px;
+.coverage-main {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+/* 覆盖率环形进度：只用一个 conic-gradient，不引入图表库 */
+.coverage-ring {
+  flex: 0 0 auto;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  padding: 6px;
+  background: conic-gradient(var(--accent) var(--pct), #e8edf7 0);
+}
+
+.coverage-ring-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.coverage-ring-num {
+  font-size: 26px;
   font-weight: 800;
   line-height: 1;
   letter-spacing: -.03em;
-  color: var(--accent);
+  color: var(--primary);
   font-variant-numeric: tabular-nums;
 }
 
-.coverage-label {
+.coverage-ring-num small {
+  margin-left: 1px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.coverage-ring-label {
+  margin-top: 3px;
+  font-size: 10.5px;
+  letter-spacing: .5px;
+  color: var(--text-light);
+}
+
+.coverage-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.coverage-title {
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.coverage-sub {
+  margin-top: 5px;
   font-size: 13.5px;
   color: var(--text-light);
-  margin-top: 8px;
-  letter-spacing: .3px;
+}
+
+.coverage-sub b {
+  color: var(--primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.coverage-bar {
+  margin-top: 10px;
+  height: 6px;
+  border-radius: 999px;
+  background: #e8edf7;
+  overflow: hidden;
+}
+
+.coverage-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width .3s;
 }
 
 .task-card {
@@ -139,12 +211,43 @@ body {
   box-shadow: var(--shadow-soft);
 }
 
+/* 今日主任务稍微突出，其余任务用圆点区分类型 */
+.task-card.primary {
+  border-color: #cddcf8;
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 62%);
+}
+
 .task-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
   font-size: 17.5px;
   font-weight: 700;
   letter-spacing: -.01em;
   margin-bottom: 6px;
   color: var(--primary);
+}
+
+.task-title::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.task-card.primary .task-title {
+  font-size: 18.5px;
+}
+
+.task-card.primary .task-title::before { background: var(--accent); }
+.task-review .task-title::before { background: #0d9488; }
+.task-cluster .task-title::before { background: #7c3aed; }
+.task-export .task-title::before { background: #94a3b8; }
+
+.task-title .beta-badge {
+  margin-left: 0;
 }
 
 .task-desc {
@@ -358,6 +461,20 @@ body {
   font-size: 14.5px;
   color: var(--text-light);
   margin-bottom: 4px;
+}
+
+/* 实战单词标记：背诵时也能看到这个词加过几次 */
+.card-practice {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 3px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(8,145,178,.26);
+  background: rgba(8,145,178,.09);
+  color: #0e7490;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: .2px;
 }
 
 .card-hint {

@@ -251,10 +251,18 @@ const Dashboard = {
     <div class="dashboard">
       <!-- 覆盖率卡片 -->
       <div class="coverage-card">
-        <div class="coverage-number">{{ state.coverage.coveragePercent }}%</div>
-        <div class="coverage-label">真题文本覆盖率</div>
-        <div style="font-size:12px;opacity:0.8;margin-top:8px;">
-          已学习 {{ state.stats.learned }} / {{ state.stats.total }} 词
+        <div class="coverage-main">
+          <div class="coverage-ring" :style="{ '--pct': state.coverage.coveragePercent + '%' }">
+            <div class="coverage-ring-inner">
+              <span class="coverage-ring-num">{{ state.coverage.coveragePercent }}<small>%</small></span>
+              <span class="coverage-ring-label">覆盖率</span>
+            </div>
+          </div>
+          <div class="coverage-info">
+            <div class="coverage-title">真题文本覆盖率</div>
+            <div class="coverage-sub">已学习 <b>{{ state.stats.learned }}</b> / {{ state.stats.total }} 词</div>
+            <div class="coverage-bar"><i :style="{ width: state.coverage.coveragePercent + '%' }"></i></div>
+          </div>
         </div>
       </div>
 
@@ -280,35 +288,35 @@ const Dashboard = {
       </div>
 
       <!-- 今日主任务 -->
-      <div class="task-card">
+      <div class="task-card primary">
         <div class="task-title">今日主任务</div>
         <div class="task-desc">50 个新词（按词频降序）+ 30 个昨天不会的词</div>
         <button class="btn-primary" @click="startStudy">开始今日学习</button>
       </div>
 
       <!-- 第二任务 -->
-      <div class="task-card">
+      <div class="task-card task-review">
         <div class="task-title">第二任务</div>
         <div class="task-desc">复习熟练度 1-4 的词表（完全不熟悉 / 熟悉但不记得 / 看了才记住 / 勉强记住）</div>
         <button class="btn-secondary" @click="startReview">开始复习</button>
       </div>
 
       <!-- 词群背诵 Beta -->
-      <div class="task-card">
+      <div class="task-card task-cluster">
         <div class="task-title">词群背诵 <span class="beta-badge">Beta</span></div>
         <div class="task-desc">近义词、易混词、同词根词族成组背；支持遮释义、词频筛选、乱序和错题回队。不占每日 50+30 的任务。</div>
         <button class="btn-secondary" @click="$emit('clusters')">进入词群背诵</button>
       </div>
 
       <!-- 导出今日词汇 -->
-      <div class="task-card">
+      <div class="task-card task-export">
         <div class="task-title">导出今日词汇</div>
         <div class="task-desc">导出今天学习的所有新词（Markdown 格式），含单词、词性、词频、释义、分类等。复制到 DeepSeek 让 AI 改你写的句子。</div>
         <button class="btn-secondary" @click="exportTodayWords">导出今日词汇</button>
       </div>
 
       <!-- 按熟练度导出 -->
-      <div class="task-card">
+      <div class="task-card task-export">
         <div class="task-title">按熟练度导出</div>
         <div class="task-desc">导出已学单词，按熟练度分组（6 档可选），适合针对性复习或让 DeepSeek 改写。</div>
         <button class="btn-secondary" @click="openProfExportModal">按熟练度导出</button>
