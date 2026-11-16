@@ -83,6 +83,8 @@ const Store = {
 
     wordListProf: null,
 
+    searchQuery: '',       // 全局查词：记住上次输入，切走再回来能恢复
+
     stats: { total: 0, learned: 0, byProficiency: {} },
     coverage: { coveredCount: 0, totalFrequency: 0, coveragePercent: 0 },
     tempCount: 0,
@@ -345,6 +347,11 @@ const Store = {
     }));
     this.state.reviewIndex = 0;
     return true;
+  },
+
+  // 全局查词：在整张词频表里模糊搜索，不改动词表状态
+  async searchWords(query) {
+    return await DB.searchAllWords(query);
   },
 
   async loadWordList(proficiency) {

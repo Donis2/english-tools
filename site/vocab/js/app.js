@@ -246,6 +246,12 @@ const app = createApp({
         try { history.replaceState({ page: 'clusters' }, '', '#clusters'); } catch (e) {}
       }
 
+      // 直接打开 /vocab/#search 时进入全局查词
+      if (entryHash === 'search') {
+        store.navigate('search', true);
+        try { history.replaceState({ page: 'search' }, '', '#search'); } catch (e) {}
+      }
+
       // 已经在这个页面里时再改 hash（比如从浏览器收藏点 #practice），不会重新加载，
       // 所以单独监听一次。
       window.addEventListener('hashchange', async () => {
@@ -255,6 +261,9 @@ const app = createApp({
         }
         if (location.hash === '#clusters' && store.state.currentPage !== 'clusters') {
           store.navigate('clusters', true);
+        }
+        if (location.hash === '#search' && store.state.currentPage !== 'search') {
+          store.navigate('search', true);
         }
       });
     });
@@ -318,6 +327,11 @@ const app = createApp({
               词群
             </button>
             <button class="nav-tab"
+                    :class="{ active: state.currentPage === 'search' }"
+                    @click="navigate('search')">
+              查词
+            </button>
+            <button class="nav-tab"
                     :class="{ active: state.currentPage === 'settings' }"
                     @click="navigate('settings')">
               设置
@@ -344,6 +358,8 @@ const app = createApp({
         <cluster-view v-else-if="state.currentPage === 'clusters'"
                      @back="backToDashboard">
         </cluster-view>
+
+        <search-view v-else-if="state.currentPage === 'search'"></search-view>
 
         <word-list v-else-if="state.currentPage === 'wordlist'"
                    @back="backToDashboard">
@@ -509,6 +525,7 @@ app.component('dashboard', window.Dashboard);
 app.component('card-view', window.CardView);
 app.component('review-view', window.ReviewView);
 app.component('cluster-view', window.ClusterView);
+app.component('search-view', window.SearchView);
 app.component('word-list', window.WordList);
 app.component('example-modal', window.ExampleModal);
 

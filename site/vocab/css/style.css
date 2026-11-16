@@ -875,6 +875,182 @@ body {
   font-size: 15px;
 }
 
+/* ====== 全局查词 ====== */
+.search-view {
+  padding: 18px 16px 28px;
+}
+
+.search-head {
+  margin-bottom: 14px;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 50px;
+  padding: 0 12px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-soft);
+  transition: border-color .18s, box-shadow .18s;
+}
+
+.search-box:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.search-box svg {
+  flex: 0 0 auto;
+  width: 19px;
+  height: 19px;
+  color: var(--text-light);
+}
+
+.search-input-lg {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 16.5px;
+  color: var(--text);
+}
+
+.search-input-lg::placeholder { color: #a8b0bd; }
+.search-input-lg::-webkit-search-cancel-button { display: none; }
+
+.search-clear {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 50%;
+  background: #f1f3f6;
+  color: var(--text-light);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.search-clear:hover { background: #e6e9ef; color: var(--primary); }
+
+.search-meta {
+  margin-top: 9px;
+  font-size: 12.5px;
+  color: var(--text-light);
+}
+
+.search-item { align-items: flex-start; }
+.search-item.open { border-color: var(--accent); }
+
+.search-rank {
+  font-size: 11.5px;
+  color: var(--text-light);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 命中片段高亮：中文查释义、英文查拼写时都能一眼看到匹配位置 */
+.search-item mark {
+  padding: 0 1px;
+  border-radius: 3px;
+  background: #fde68a;
+  color: inherit;
+}
+
+/* 形近词分隔条 + 标签 */
+.search-sep {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 2px 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-light);
+}
+
+.search-sep::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.search-near-tag {
+  flex-shrink: 0;
+  padding: 2px 7px;
+  border: 1px solid #f2e3bc;
+  border-radius: 8px;
+  background: #fffaeb;
+  color: #a16207;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* 展开后显示完整释义（按词性分行），不再截断两行 */
+.word-def.expanded {
+  display: block;
+  -webkit-line-clamp: unset;
+  white-space: pre-line;
+}
+
+.search-toggle {
+  flex: 0 0 auto;
+  padding-top: 2px;
+  color: var(--text-light);
+  font-size: 16px;
+}
+
+.search-guide {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: 0 1px 2px rgba(17,24,39,.04);
+}
+
+.search-guide-title {
+  margin-bottom: 8px;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.search-guide-row {
+  display: flex;
+  gap: 10px;
+  font-size: 13.5px;
+  line-height: 1.95;
+  color: var(--text-light);
+}
+
+.search-guide-row b {
+  flex: 0 0 64px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.search-guide-row code {
+  padding: 0 5px;
+  border-radius: 5px;
+  background: #f1f3f6;
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 12.5px;
+  color: var(--primary);
+}
+
+/* 查词结果需要逐条读释义，宽屏也只排两列（词表那边是三列） */
+@media (min-width: 900px) {
+  .search-view .wordlist-items {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 /* ====== 临时词相关 ====== */
 /* 卡片模式：加入临时（独立全宽按钮，区别于6档评分） */
 .temp-add-btn {

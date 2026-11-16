@@ -143,6 +143,138 @@ async function getWordsByNames(names) {
   return (names || []).map(n => byWord.get(n)).filter(Boolean);
 }
 
+// ====== 全局查词：在整张词频表里模糊搜索（英文 / 中文都行） ======
+// 词频表是只读的，全量读一次缓存起来，之后每次输入只在内存里过一遍
+let allWordsCache = null;
+
+async function getAllWords() {
+  if (!allWordsCache) allWordsCache = await db.words.toArray();
+  return allWordsCache;
+}
+
+function normSearch(s) {
+  return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+// 匹配优先级：完全一致 > 单词前缀 > 单词包含 > 其他拼写 > 释义包含（中文走这条）
+function searchScore(row, q) {
+  const w = String(row.word || '').toLowerCase();
+  const v = String(row.variant || '').toLowerCase();
+  const d = String(row.definition || '').toLowerCase();
+  if (w === q) return 0;
+  if (w.startsWith(q)) return 1;
+  if (w.includes(q)) return 2;
+  if (v && (v === q || v.split(/[,，/;\s]+/).some(x => x && x.startsWith(q)))) return 3;
+  if (v && v.includes(q)) return 4;
+  if (d && d.includes(q)) return 5;
+  return -1;
+}
+
+// 编辑距离（含相邻字母颠倒算 1 步）：用来找 board / broad 这类形近词
+function editDistance(a, b, max) {
+  const la = a.length, lb = b.length;
+  if (Math.abs(la - lb) > max) return max + 1;
+  let prevPrev = null;
+  let prev = new Array(lb + 1);
+  for (let j = 0; j <= lb; j++) prev[j] = j;
+  for (let i = 1; i <= la; i++) {
+    const cur = new Array(lb + 1);
+    cur[0] = i;
+    for (let j = 1; j <= lb; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      let v = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + cost);
+      if (prevPrev && i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+        v = Math.min(v, prevPrev[j - 2] + 1);
+      }
+      cur[j] = v;
+    }
+    prevPrev = prev;
+    prev = cur;
+  }
+  return prev[lb];
+}
+
+// 字母相同、顺序不同（board / broad 这种最容易混的），建一次索引
+let anagramIndex = null;
+
+async function getAnagramIndex() {
+  if (anagramIndex) return anagramIndex;
+  const rows = await getAllWords();
+  const map = new Map();
+  for (const r of rows) {
+    const key = String(r.word || '').toLowerCase();
+    if (!key) continue;
+    const sig = key.split('').sort().join('');
+    if (!map.has(sig)) map.set(sig, []);
+    map.get(sig).push(r);
+  }
+  anagramIndex = map;
+  return map;
+}
+
+// 查全词库：英文按单词/其他拼写，中文按释义；同级别按词频排名（越靠前越常见）
+// 英文还会在末尾补几条「拼写相近」的候选（字母顺序不同、打错一个字母、漏字母都能兜住）
+async function searchAllWords(query, limit = 80) {
+  const q = normSearch(query);
+  if (!q) return [];
+
+  const rows = await getAllWords();
+  const hits = [];
+  for (const r of rows) {
+    const s = searchScore(r, q);
+    if (s >= 0) hits.push({ r, s });
+  }
+  hits.sort((a, b) => (a.s - b.s) || ((a.r.rank || 0) - (b.r.rank || 0)));
+
+  const picked = hits.slice(0, limit).map(x => ({ ...x.r, near: false }));
+
+  // 形近词：只对纯英文查询做，避免中文查询算出无意义的结果
+  if (/^[a-z]{3,}$/.test(q) && picked.length < limit) {
+    const seen = new Set(picked.map(w => w.word));
+    const near = [];
+
+    // 1) 字母相同、顺序不同：board ↔ broad、form ↔ from
+    const sig = q.split('').sort().join('');
+    for (const r of (await getAnagramIndex()).get(sig) || []) {
+      const w = String(r.word || '').toLowerCase();
+      if (w === q || seen.has(w)) continue;
+      seen.add(w);
+      near.push({ r, d: 0 });
+    }
+
+    // 2) 编辑距离 1（长词放宽到 2）：打错、多打、漏打、相邻字母颠倒
+    const maxD = q.length >= 9 ? 2 : 1;
+    for (const r of rows) {
+      const w = String(r.word || '').toLowerCase();
+      if (!w || seen.has(w)) continue;
+      if (Math.abs(w.length - q.length) > maxD) continue;
+      const d = editDistance(q, w, maxD);
+      if (d <= maxD) {
+        seen.add(w);
+        near.push({ r, d });
+      }
+    }
+
+    near.sort((a, b) => (a.d - b.d) || ((a.r.rank || 0) - (b.r.rank || 0)));
+    for (const n of near.slice(0, 6)) {
+      if (picked.length >= limit) break;
+      picked.push({ ...n.r, near: true });
+    }
+  }
+
+  if (!picked.length) return [];
+
+  // 补上熟练度和「实战单词」记录，让结果能显示学习状态
+  const cards = await db.cards.where('word').anyOf(picked.map(w => w.word)).toArray();
+  const cardMap = new Map(cards.map(c => [c.word, c]));
+  const practice = await getPracticeCounts();
+  return picked.map(w => ({
+    ...w,
+    proficiency: cardMap.has(w.word) ? cardMap.get(w.word).proficiency : null,
+    practiceCount: practice[normalizePracticeWord(w.word)] || 0,
+  }));
+}
+
 // ====== cards 表 CRUD ======
 
 async function getCardsByProficiency(prof) {
@@ -741,6 +873,8 @@ window.DB = {
   initWordsData,
   getWordsByRange,
   getWordsByNames,
+  getAllWords,
+  searchAllWords,
   getCardsByProficiency,
   setProficiency,
   markSeen,
