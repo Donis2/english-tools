@@ -46,12 +46,14 @@ const SIZE_LIMIT = {
   baidu_accurate: 3 * MB,
   baidu_general: 3 * MB,
 };
-// 函数整体预算：Netlify 同步函数 10s 上限，留出余量提前收尾
-const TOTAL_BUDGET_MS = 8200;
-// 给 PaddleOCR 的上限：它要「提交 + 轮询 + 下载」三步，冷启动实测 2~7s，
-// 但必须给后面的百度留出 ~1.2s，否则一个慢任务会把整批时间吃光。
-const PADDLE_BUDGET_MS = 6000;
-const PADDLE_MIN_MS = 2600;
+// 函数整体预算：Netlify 同步函数默认 10s，已在 netlify.toml 把本函数放宽到 26s。
+// 首次请求要冷启动 PaddleOCR 的任务队列，给足时间，否则第一张图必然 504。
+// 万一平台仍按 10s 掐断，7s + 百度 ~1.5s 也还在 10s 内，第一张不会白跑。
+const TOTAL_BUDGET_MS = 16000;
+// 给 PaddleOCR 的上限：它要「提交 + 轮询 + 下载」三步，热的时候 2~4s，
+// 冷启动可能 8s+。给太久会让后面本来 1s 就能出结果的百度没时间，所以卡在 7s。
+const PADDLE_BUDGET_MS = 7000;
+const PADDLE_MIN_MS = 3000;
 
 let cache = { token: '', exp: 0 };
 
@@ -287,7 +289,7 @@ async function callPaddle(image, mime, ms) {
   const sres = await fetchTimeout(
     PADDLE_JOB_URL,
     { method: 'POST', headers: auth, body: form },
-    Math.min(ms, 7000),
+    Math.min(ms, 12000),
   );
   const sj = await sres.json();
   if (sj.code !== 0) throw new OcrError(paddleCode(sj.code), `提交失败：${sj.msg || sj.code}`);

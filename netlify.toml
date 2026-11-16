@@ -5,6 +5,11 @@
 [functions]
   node_bundler = "esbuild"
 
+# OCR 要串联「提交 + 轮询 + 下载」，默认 10s 会被掐断（第一张图尤其明显，因为要冷启动），
+# 放宽到 Netlify 同步函数上限 26s
+[functions.ocr]
+  timeout = 26
+
 # 单页应用不需要额外重写；静态目录 site/ 下就是完整站点
 # 部署后在 Netlify 后台配置三个环境变量（OCR 云函数用）：
 #   BAIDU_API_KEY / BAIDU_SECRET_KEY / OCR_SPACE_KEY

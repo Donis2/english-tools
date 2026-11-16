@@ -376,7 +376,7 @@
     deadUntil: 0,      // 云端整体不可用时的冷却期，避免每张图都白等一次
   };
   const PROBE_TTL = 5 * 60 * 1000;
-  const DEAD_COOLDOWN = 60 * 1000;
+  const DEAD_COOLDOWN = 15 * 1000;   // 云端整体抖动时的冷却期，短一点，下一张就能再试
 
   function fetchTimeout(url, opts, ms) {
     const ctrl = new AbortController();
@@ -446,8 +446,9 @@
     // 所以先缩到 1800：画质够用，上传和服务端都快。其余引擎按各自体积上限压。
     const MB = 1024 * 1024;
     const isPaddle = engine === 'paddle_vl' || engine === 'auto';
+    // Netlify 函数请求体上限约 6MB，base64 会膨胀 4/3，所以原图控制在 4MB 以内
     const target = engine === 'ocrspace' ? 0.95 * MB
-      : isPaddle ? 6 * MB
+      : isPaddle ? 4 * MB
       : 2.8 * MB;                                // 百度 3MB、EasyOCR 3MB 的共同安全线
     const maxSide = isPaddle ? 1800 : 2600;
     const upload = await shrinkForCloud(file, target, maxSide);
@@ -458,7 +459,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image: dataUrl, engine }),
-      }, 28000);
+      }, 30000);
     } catch (e) {
       const err = new Error('云端 OCR 请求失败：' + ((e && e.message) || e));
       err.cloudDown = true;
@@ -468,6 +469,7 @@
       const err = new Error(res.status === 404
         ? '云端 OCR 未部署（本地预览只有浏览器内引擎）'
         : '云端 OCR 不可用（HTTP ' + res.status + '）');
+      err.status = res.status;
       err.cloudDown = res.status === 404 || res.status >= 500;
       throw err;
     }
@@ -595,12 +597,14 @@
           engineId = r.endpoint || '';
           attempts = r.attempts;
           shrunk = !!r.shrunk;
+          cloudState.deadUntil = 0;         // 这次云端正常，解除冷却
         } catch (e) {
           cloudError = (e && e.message) ? e.message : String(e);
           attempts = (e && e.attempts) || [];
           if (e && e.cloudDown) {
+            // 只是暂时抖动：短期冷却后允许下一张再试，别把「未部署」的结论写死
             cloudState.deadUntil = Date.now() + DEAD_COOLDOWN;
-            cloudState.deployed = false;
+            if (e.status === 404) cloudState.deployed = false;
             cloudState.checkedAt = Date.now();
           }
         }

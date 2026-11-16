@@ -500,10 +500,10 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 </div>
 
 <!-- Tesseract 由 ocr.js 按需加载（jsdelivr → unpkg → npmmirror 自动换源），不再写死一个 CDN -->
-<script src="ocr.js"></script>
+<script src="ocr.js?v=2"></script>
 <!-- 同域共用背单词的数据库：实战单词直接写进 IndexedDB -->
 <script src="../vocab/js/vendor/dexie.min.js"></script>
-<script src="../vocab/js/db.js?v=20"></script>
+<script src="../vocab/js/db.js?v=21"></script>
 <!-- 截图页也要加载同步模块，否则在这里加的实战单词只会留在本机 -->
 <script src="../vocab/js/sync.js?v=21"></script>
 <script>
@@ -537,6 +537,7 @@ let queue = [];          // {id, file, url}
 let uid = 0;
 let running = false;
 let freqMax = null;      // 词频上限：只标注/列出 freq ≤ 它的单词；null = 不限
+let prefetch = null;     // 第一张图的后台预识别 { id, merge, engine, promise }
 
 /* ================= 识别引擎：可选 + 可用性可见 ================= */
 const ENGINE_BASE = {
@@ -561,6 +562,13 @@ const engineSel = $('#engineSel'),
 engineSel.addEventListener('change', ()=>{
   try { localStorage.setItem('shot.engine', engineSel.value); } catch(e){}
   refreshEngineHint();
+  dropPrefetch();        // 换引擎后，后台那次结果不算数
+  prefetchFirst();
+});
+
+mergeSw.addEventListener('change', ()=>{
+  dropPrefetch();        // 换段落模式后，后台那次结果不算数
+  prefetchFirst();
 });
 
 function setEngineState(state, text){
@@ -638,6 +646,7 @@ function addFiles(list){
     queue.push({ id: ++uid, file: f, url: URL.createObjectURL(f) });
   }
   renderQueue();
+  prefetchFirst();          // 图片一到就先在后台跑第一张
 }
 function removeAt(id){
   const i = queue.findIndex(q => q.id === id);
@@ -645,11 +654,14 @@ function removeAt(id){
   URL.revokeObjectURL(queue[i].url);
   queue.splice(i, 1);
   renderQueue();
+  dropPrefetch();           // 第一张换了，后台结果作废
+  prefetchFirst();
 }
 function clearQueue(){
   queue.forEach(q => URL.revokeObjectURL(q.url));
   queue = [];
   renderQueue();
+  dropPrefetch();
 }
 function renderQueue(){
   const n = queue.length;
@@ -683,6 +695,7 @@ thumbsEl.addEventListener('click', e=>{
 });
 drop.addEventListener('click', e=>{
   if(e.target.closest('.thumb')) return;
+  if(e.target.closest('input')) return;   // 程序化触发的 input 点击会冒泡回来，别再开一次
   fileInput.click();
 });
 clearBtn.addEventListener('click', clearQueue);
@@ -844,11 +857,50 @@ document.addEventListener('dragover', e=>e.preventDefault());
 document.addEventListener('drop', e=>e.preventDefault());
 
 /* ================= 逐张处理 ================= */
+
+/* 这次会不会走本地引擎（云端未部署/没密钥/刚失败/手动选了本地） */
+function willUseLocal(){
+  if(engineSel.value === 'local') return true;
+  const cs = OcrApp.cloudState;
+  if(!cs) return false;
+  const off = cs.checked && (cs.reason === 'missing' || (cs.deployed && !cs.anyConfigured));
+  return off || Date.now() < cs.deadUntil;
+}
+
+/* 本地引擎第一次用要下载内核和语言包，几十秒起步。
+   提前加载并显示进度，别让第 1 张图替整个冷启动背锅。 */
+async function warmLocalEngine(){
+  $('#pText').textContent = '正在准备本地识别引擎（首次需下载，请稍候）…';
+  try{ await OcrApp.ensureWorker(); }catch(e){ /* 交给 analyze 报错 */ }
+}
+
+/* 预览第一张：图片一加进队列就先在后台识别。
+   云端第一次要冷启动（PaddleOCR 任务队列 8s 左右），提前跑掉，
+   点「开始识别」时第一张往往已经出结果，也不会出现「第一张总失败」。 */
+function dropPrefetch(){ prefetch = null; }
+function prefetchFirst(){
+  if(running || !queue.length) return;
+  if(willUseLocal()) return;              // 本地会下载内核，不提前跑
+  const first = queue[0];
+  const engine = engineSel.value;
+  const mergeOn = mergeSw.checked;
+  if(prefetch && prefetch.id === first.id && prefetch.merge === mergeOn && prefetch.engine === engine) return;
+  prefetch = {
+    id: first.id, merge: mergeOn, engine,
+    promise: OcrApp.analyze(first.file, { merge: mergeOn, engine }).catch(() => null)
+  };
+}
+
 runBtn.addEventListener('click', async ()=>{
   if(!queue.length || running) return;
   running = true;
   const jobs = queue.slice();
   const mergeOn = mergeSw.checked;
+  const engineNow = engineSel.value;
+  // 后台预习的结果只在「同一张 + 同样的选项」时才算数
+  const ready = (prefetch && prefetch.id === jobs[0].id && prefetch.merge === mergeOn && prefetch.engine === engineNow)
+    ? prefetch.promise : null;
+  dropPrefetch();
   renderQueue();
 
   result.innerHTML = `
@@ -861,27 +913,52 @@ runBtn.addEventListener('click', async ()=>{
   const blocks = $('#blocks');
   refreshExport();                       // 新一批结果开始前先禁用导出
 
+  if(willUseLocal()) await warmLocalEngine();
+
   let failed = 0;
   for(let i = 0; i < jobs.length; i++){
     const job = jobs[i];
-    $('#pText').textContent = `正在识别 第 ${i+1} / ${jobs.length} 张 · ${job.file.name}`;
+    const label = `正在识别 第 ${i+1} / ${jobs.length} 张 · ${job.file.name}`;
+    $('#pText').textContent = label;
     $('#pBar').style.width = (i / jobs.length * 100) + '%';
-    try{
-      const data = await OcrApp.analyze(job.file, { merge: mergeOn, engine: engineSel.value });
-      if(!data.ok) throw new Error(data.error || '识别失败');
+
+    // 第一张图往往要等引擎冷启动（云端跑任务 / 本地下载内核），一次失手很常见。
+    // 失败自动重试一次，避免「两张图里第一张总是失败」。
+    let data = (i === 0 && ready) ? await ready : null;
+    let lastErr = null;
+    for(let attempt = 0; data === null && attempt < 2; attempt++){
+      try{
+        data = await OcrApp.analyze(job.file, { merge: mergeOn, engine: engineNow });
+        if(!data.ok) throw new Error(data.error || '识别失败');
+        lastErr = null;
+        break;
+      }catch(err){
+        data = null;
+        lastErr = err;
+        // 图片本身坏了，重试也没用
+        if(/图片读取失败|没有收到有效的图片/.test(String(err && err.message))) break;
+        if(attempt === 0){
+          $('#pText').textContent = `第 ${i+1} 张没成功，正在自动重试…`;
+          await new Promise(r => setTimeout(r, 800));
+          $('#pText').textContent = label;
+        }
+      }
+    }
+
+    if(data && data.ok){
       blocks.appendChild(makeBlockEl(data, job.file.name, i + 1, jobs.length));
       reportEngine(data);
       refreshExport();
-    }catch(err){
+    }else{
       failed++;
       blocks.insertAdjacentHTML('beforeend',
         `<section class="blk"><div class="blk-head">
            <span class="blk-no">图片 ${i+1}</span>
            <span class="blk-name">${escapeHtml(job.file.name)}</span></div>
-         <div class="err"><b>这张识别失败：</b>${escapeHtml(err.message)}</div></section>`);
+         <div class="err"><b>这张识别失败（已自动重试）：</b>${escapeHtml((lastErr && lastErr.message) || '未知错误')}</div></section>`);
     }
     // 运行中云端挂了（404/超时）就地把状态点改掉，别还显示「可用」
-    if(OcrApp.cloudState.deadUntil > Date.now()) setEngineState('warn', '云端刚失败 · 用本地');
+    if(OcrApp.cloudState.deadUntil > Date.now()) setEngineState('warn', '云端暂时不可用 · 本次用本地');
     $('#pBar').style.width = ((i + 1) / jobs.length * 100) + '%';
   }
 
@@ -1163,8 +1240,13 @@ function reportEngine(data){
   else if(failed) tail = `（途中换过 ${failed} 次引擎）`;
   el.textContent = `上次：${used} · 耗时 ${data.stats.elapsed}s`
     + (data.shrunk ? ' · 图片已压缩后上传' : '') + tail;
-  // 云端全军覆没就地把绿点改成黄的，别还让人以为云端好好的
-  if(at.length && !at.some(a => a.ok)) setEngineState('warn', '云端引擎暂不可用');
+  // 状态点跟着真实结果走：云端成功就恢复绿点，全失败才变黄
+  if(at.length && !at.some(a => a.ok)){
+    setEngineState('warn', '云端引擎暂不可用');
+  }else if(data.engineId && data.engineId !== 'local'){
+    const n = Object.values(OcrApp.cloudState.engines || {}).filter(e => e && e.configured).length;
+    setEngineState('ok', n ? `云端 ${n} 个可用` : '云端可用');
+  }
 }
 
 /* 把一行识别文本还原成 HTML：命中词加粗下划线 + 右上角词频。
