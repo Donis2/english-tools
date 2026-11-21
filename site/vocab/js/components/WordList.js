@@ -431,9 +431,11 @@ const WordList = {
           </button>
         </div>
 
-        <!-- 加入临时（复制，不影响原熟练度） -->
-        <button v-if="!isPracticeProf && isTemp(currentWord.word)" class="temp-added-btn-block" disabled>
-          🔖 已在临时列表
+        <!-- 已在临时：直接给移出入口，不用再回临时词表 -->
+        <button v-if="!isPracticeProf && isTemp(currentWord.word)" class="temp-remove-btn-block"
+                @click="removeFromTemp(currentWord.word)"
+                title="从临时列表移出，原熟练度不受影响">
+          🔖 已在临时 · 点击移出
         </button>
         <button v-else-if="!isPracticeProf" class="temp-add-btn" @click="addToTempAndNext" title="复制到临时列表，当前熟练度保持不变">
           🔖 加入临时
@@ -486,7 +488,7 @@ const WordList = {
             <div class="wordlist-actions">
               <button v-if="isPracticeProf || isTempProf" class="practice-remove-btn" @click.stop="isPracticeProf ? removeFromPractice(word.word) : removeFromTemp(word.word)">移除</button>
               <template v-else>
-                <button v-if="isTemp(word.word)" class="temp-added-btn" disabled>已在临时</button>
+                <button v-if="isTemp(word.word)" class="temp-remove-btn" @click.stop="removeFromTemp(word.word)">移出临时</button>
                 <button v-else class="temp-add-mini" @click.stop="addToTemp(word.word)">加入临时</button>
               </template>
             </div>

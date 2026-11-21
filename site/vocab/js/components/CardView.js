@@ -3,7 +3,7 @@
 const CardView = {
   name: 'CardView',
   setup(props, { emit }) {
-    const { watch, computed, ref } = Vue;
+    const { watch, computed, ref, onMounted } = Vue;
     const store = window.Store;
 
     function flipCard() {
@@ -41,8 +41,38 @@ const CardView = {
     }
 
     // 加入临时（复制语义，不改原熟练度），并前进到下一个
-    function addTemp() {
-      store.rateCardTemp();
+    async function addTemp() {
+      await store.rateCardTemp();
+      await loadTempSet();
+    }
+
+    // ====== 当前词是否已在临时列表：在卡片上直接显示「移出」 ======
+    const tempWordSet = ref(new Set());
+
+    async function loadTempSet() {
+      try {
+        tempWordSet.value = await DB.getTempWordSet();
+      } catch (e) {
+        tempWordSet.value = new Set();
+      }
+    }
+
+    onMounted(loadTempSet);
+
+    const isTemp = computed(() => {
+      const card = store.state.currentCard;
+      return !!(card && card.wordData && tempWordSet.value.has(card.wordData.word));
+    });
+
+    // 移出临时：留在当前卡片，不前进，方便误点后再加回来
+    async function removeTemp() {
+      const card = store.state.currentCard;
+      if (!card) return;
+      const word = card.wordData.word;
+      await store.removeFromTemp(word);
+      const s = new Set(tempWordSet.value);
+      s.delete(word);
+      tempWordSet.value = s;
     }
 
     // 监听卡片变化自动朗读
@@ -103,6 +133,8 @@ const CardView = {
       onTouchEnd: swipe.onTouchEnd,
       onCardClick,
       addTemp,
+      isTemp,
+      removeTemp,
       proficiencyLevels,
       formattedDef,
       example,
@@ -176,10 +208,16 @@ const CardView = {
           <span class="prof-desc">{{ level.desc }}</span>
         </button>
         <!-- 临时：复制语义，保留原熟练度，额外复制一份到临时 -->
-        <button class="prof-btn temp-prof-btn" @click.stop="addTemp"
+        <button v-if="!isTemp" class="prof-btn temp-prof-btn" @click.stop="addTemp"
                 title="复制到临时列表，当前熟练度保持不变">
           <span class="prof-name">🔖 临时（复制）</span>
           <span class="prof-desc">保留原熟练度，不移动</span>
+        </button>
+        <!-- 已经在临时里：直接给移出入口，不用回主页词表 -->
+        <button v-else class="prof-btn temp-remove-prof-btn" @click.stop="removeTemp"
+                title="从临时列表移出，原熟练度不受影响">
+          <span class="prof-name">🔖 已在临时</span>
+          <span class="prof-desc">点击移出临时列表</span>
         </button>
       </div>
 

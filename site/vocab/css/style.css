@@ -708,6 +708,28 @@ body {
   margin-top: 0;
 }
 
+/* 已经加进临时的词：同一位置换成可点击的「移出」，不再给一个失效按钮 */
+.temp-remove-prof-btn {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 14px;
+  background: #fff;
+  border: 1.5px solid #fecaca;
+  color: #b91c1c;
+}
+
+.temp-remove-prof-btn .prof-desc {
+  margin-top: 0;
+  color: #d08a8a;
+}
+
+.temp-remove-prof-btn:hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
 /* ====== 完成页 ====== */
 .complete-view {
   display: flex;
@@ -1074,22 +1096,30 @@ body {
 .temp-add-btn:hover { background: #f3edff; border-color: #a78bfa; }
 .temp-add-btn:active { transform: scale(0.98); }
 
-.temp-added-btn-block {
+.temp-remove-btn-block {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 100%;
   max-width: 500px;
   padding: 13px;
-  border: 1px solid var(--border);
+  border: 1.5px solid #fecaca;
   border-radius: 12px;
-  background: #f4f5f7;
-  color: #9aa3b0;
+  background: #fff5f5;
+  color: #dc2626;
   font-family: inherit;
   font-size: 14.5px;
   font-weight: 600;
-  cursor: not-allowed;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
 }
+
+.temp-remove-btn-block:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+.temp-remove-btn-block:active { transform: scale(0.98); }
 
 /* 词表列表操作按钮容器 */
 .wordlist-actions {
