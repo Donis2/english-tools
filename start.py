@@ -31,7 +31,7 @@ SITE_DIR = os.path.join(ROOT, "site")
 NOVEL_DIR = os.path.normpath(os.path.join(ROOT, "..", "单词文章记忆", "html"))
 ENV_FILE = os.path.join(ROOT, ".env")
 FN_SCRIPT = os.path.join(ROOT, "tools", "ocr-fn.mjs")
-FN_PATH = os.path.join(ROOT, "netlify", "functions", "ocr.js")
+FN_DIR = os.path.join(ROOT, "netlify", "functions")
 
 FN_PREFIX = "/.netlify/functions/"
 
@@ -87,7 +87,21 @@ class Handler(SimpleHTTPRequestHandler):
                            json.dumps(obj, ensure_ascii=False))
 
     def _serve_function(self, method):
-        """把请求转给 tools/ocr-fn.mjs 里的 Node 进程（复用 netlify/functions/ocr.js）。"""
+        """按请求路径里的函数名调用对应文件（ocr / translate …）。
+
+        以前一律转给 ocr.js，导致本地点「翻译」也被当成 OCR，报「没有收到有效的图片」。
+        """
+        rel = urlsplit(self.path).path[len(FN_PREFIX):]
+        name = rel.strip("/").split("/")[0] or "ocr"
+        if not name.replace("-", "").replace("_", "").isalnum():
+            return self._send_json(400, {"ok": False, "error": "函数名不合法"})
+        fn_path = os.path.join(FN_DIR, name + ".js")
+        if not os.path.isfile(fn_path):
+            return self._send_json(404, {
+                "ok": False,
+                "error": "本地没有这个云函数：netlify/functions/%s.js" % name,
+            })
+
         length = int(self.headers.get("Content-Length") or 0)
         body = self.rfile.read(length).decode("utf-8", "replace") if length else ""
         node = shutil.which("node")
@@ -99,7 +113,7 @@ class Handler(SimpleHTTPRequestHandler):
         payload = json.dumps({"httpMethod": method, "body": body}, ensure_ascii=False)
         try:
             proc = subprocess.run(
-                [node, FN_SCRIPT, FN_PATH],
+                [node, FN_SCRIPT, fn_path],
                 input=payload, capture_output=True, text=True, encoding="utf-8",
                 timeout=30, cwd=ROOT,
             )
