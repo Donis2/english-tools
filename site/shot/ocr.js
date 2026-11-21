@@ -156,6 +156,9 @@
       if (Vocab.byKey.has(head.slice(0, -1) + tail)) return prev.slice(0, -1) + cur;
       return prev + cur;                       // 还原不了就保留
     }
+    // 中文行之间不补空格，否则段落里会多出一堆空格
+    const CJK = /[\u3400-\u9fff\u3000-\u303f\uff00-\uffef]/;
+    if (CJK.test(prev.slice(-1)) && CJK.test(cur.charAt(0))) return prev + cur;
     return prev + ' ' + cur;
   }
 
@@ -480,7 +483,12 @@
       err.attempts = j.attempts || [];
       throw err;
     }
-    return { lines, endpoint: j.endpoint || '', attempts: j.attempts || [], shrunk: upload !== file };
+    // 版块结构：有就按原图分段，没有（旧部署 / 部分引擎）就走原来的标点合并
+    const blocks = (j.blocks || []).map(b => ({
+      type: String((b && b.type) || 'text').toLowerCase(),
+      lines: ((b && b.lines) || []).map(t => normalizeSpaces(t)).filter(Boolean),
+    })).filter(b => b.lines.length);
+    return { lines, blocks, endpoint: j.endpoint || '', attempts: j.attempts || [], shrunk: upload !== file };
   }
 
   /* 大图先缩到云端吃得快的尺寸：体积超标或长边超限才处理，
@@ -569,6 +577,21 @@
     return out;
   }
 
+  /* 按原图版块还原段落：正文块把折行接回去，标题/表格/列表保持逐行 */
+  function blocksToParagraphs(blocks) {
+    const out = [];
+    const TEXTY = { text: 1, abstract: 1, content: 1, reference: 1, footnote: 1, formula: 1 };
+    for (const b of blocks) {
+      if (!b.lines.length) continue;
+      if (TEXTY[b.type] !== undefined) {
+        out.push(joinLines(b.lines));
+      } else {
+        for (const line of b.lines) out.push(line);
+      }
+    }
+    return out;
+  }
+
   async function analyze(file, opts) {
     const merge = !!(opts && opts.merge);
     const prefer = (opts && opts.engine) || 'auto';
@@ -593,7 +616,11 @@
       } else {
         try {
           const r = await cloudOcr(file, prefer);
-          texts = merge ? mergeByPunct(r.lines) : splitLongLines(r.lines);
+          if (merge && r.blocks && r.blocks.length) {
+            texts = blocksToParagraphs(r.blocks);        // 有版块结构：按原图分段
+          } else {
+            texts = merge ? mergeByPunct(r.lines) : splitLongLines(r.lines);
+          }
           engineId = r.endpoint || '';
           attempts = r.attempts;
           shrunk = !!r.shrunk;

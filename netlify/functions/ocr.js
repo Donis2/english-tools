@@ -156,11 +156,11 @@ function baiduCode(code) {
   return 'other';
 }
 
-async function baiduRequest(api, image, token, ms) {
+async function baiduRequest(api, image, token, ms, paragraph) {
   const form = new URLSearchParams();
   form.set('image', image);
   form.set('detect_direction', 'true');
-  form.set('paragraph', 'false');
+  form.set('paragraph', paragraph ? 'true' : 'false');
   form.set('probability', 'false');
   const res = await fetchTimeout(
     `${OCR_ROOT}${api}?access_token=${encodeURIComponent(token)}`,
@@ -175,11 +175,17 @@ async function baiduRequest(api, image, token, ms) {
 }
 
 async function callBaidu(api, image, ms) {
-  let data = await baiduRequest(api, image, await getToken(false), ms);
+  // 高精度版支持 paragraph=true，会额外返回「成段的框」，用它还原段落
+  const useParagraph = /accurate/.test(api);
+  let data = await baiduRequest(api, image, await getToken(false), ms, useParagraph);
   // token 过期：清缓存后重试一次，别把一次鉴权抖动记成「引擎坏了」
   if (data.error_code === 110 || data.error_code === 111) {
     cache = { token: '', exp: 0 };
-    data = await baiduRequest(api, image, await getToken(true), ms);
+    data = await baiduRequest(api, image, await getToken(true), ms, useParagraph);
+  }
+  // 某些账号/版本不认 paragraph 参数：退一步用普通模式再试一次，别把整条链搞挂
+  if (data.error_code && useParagraph) {
+    data = await baiduRequest(api, image, await getToken(false), ms, false);
   }
   if (data.error_code) {
     throw new OcrError(
@@ -187,9 +193,18 @@ async function callBaidu(api, image, ms) {
       `错误 ${data.error_code}：${data.error_msg || '未知'}`,
     );
   }
-  return (data.words_result || [])
+  const pick = list => (list || [])
     .map(x => (x && x.words ? String(x.words).trim() : ''))
     .filter(Boolean);
+
+  const blocks = [];
+  for (const p of data.paragraphs_result || []) {
+    const lines = pick(p && p.words_result);
+    if (lines.length) blocks.push({ type: 'text', lines });
+  }
+  const lines = pick(data.words_result);
+  const flat = lines.length ? lines : blocks.reduce((a, b) => a.concat(b.lines), []);
+  return { lines: flat, blocks };
 }
 
 async function callOcrSpace(image, mime, ms) {
@@ -224,7 +239,7 @@ async function callOcrSpace(image, mime, ms) {
     throw new OcrError(code, msg);
   }
   const text = (data.ParsedResults || []).map(p => p.ParsedText || '').join('\n');
-  return text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  return { lines: text.split(/\r?\n/).map(s => s.trim()).filter(Boolean), blocks: [] };
 }
 
 // ---------------------------------------------------------------- PaddleOCR
@@ -238,38 +253,89 @@ function paddleCode(code) {
 
 /** 从结果 JSON 抽文本行：PP-OCR 系列给逐行，VL 系列给版块 */
 function paddleLines(data) {
-  const result = (data && data.result) || {};
-  const out = [];
-
-  // PP-OCR 系列：ocrResults[].prunedResult.rec_texts（逐行 + 坐标 + 置信度）
-  for (const page of result.ocrResults || []) {
-    const pr = (page && page.prunedResult) || {};
-    for (const t of pr.rec_texts || []) {
-      const s = String(t == null ? '' : t).trim();
-      if (s) out.push(s);
-    }
+  const blocks = paddleBlocks(data);
+  if (blocks.length) {
+    const out = [];
+    for (const b of blocks) for (const s of b.lines) out.push(s);
+    return out;
   }
-  if (out.length) return out;
+  return [];
+}
+
+/** 按行距把逐行结果聚成段落（PP-OCR 分支没有段落信息时用） */
+function groupTextLines(texts, boxes) {
+  const items = [];
+  for (let i = 0; i < texts.length; i++) {
+    const s = String(texts[i] == null ? '' : texts[i]).trim();
+    if (!s) continue;
+    const b = boxes[i];
+    let top = 0, bottom = 0, hasBox = false;
+    if (Array.isArray(b) && b.length >= 8) {          // rec_polys：四个点
+      const ys = [b[1], b[3], b[5], b[7]].map(Number).filter(n => !isNaN(n));
+      if (ys.length) { top = Math.min.apply(null, ys); bottom = Math.max.apply(null, ys); hasBox = true; }
+    } else if (Array.isArray(b) && b.length >= 4) {   // rec_boxes：x1,y1,x2,y2
+      top = Number(b[1]); bottom = Number(b[3]);
+      hasBox = !isNaN(top) && !isNaN(bottom);
+    }
+    items.push({ text: s, top, bottom, h: Math.max(1, bottom - top), hasBox });
+  }
+  if (!items.length) return [];
+  if (!items.some(i => i.hasBox)) return [{ type: 'text', lines: items.map(i => i.text) }];
+
+  const hs = items.filter(i => i.h > 1).map(i => i.h).sort((a, b) => a - b);
+  const medH = hs.length ? hs[Math.floor(hs.length / 2)] : 20;
+
+  const out = [];
+  let cur = null, prev = null;
+  for (const it of items) {
+    // 行与行之间距离明显大于正常行距 → 认为换段
+    const newPara = !prev || !it.hasBox || !prev.hasBox || (it.top - prev.bottom) > medH * 0.7;
+    if (newPara) {
+      if (cur) out.push(cur);
+      cur = { type: 'text', lines: [it.text] };
+    } else {
+      cur.lines.push(it.text);
+    }
+    prev = it;
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+
+/** 保留原图版块：VL 给整段，PP-OCR 按坐标聚段 */
+function paddleBlocks(data) {
+  const result = (data && data.result) || {};
+  const blocks = [];
 
   // VL 系列：layoutParsingResults[].prunedResult.parsing_res_list（按版块，段内保持原文）
   for (const page of result.layoutParsingResults || []) {
-    const blocks = (page && page.prunedResult && page.prunedResult.parsing_res_list) || [];
-    for (const b of blocks) {
+    const list = (page && page.prunedResult && page.prunedResult.parsing_res_list) || [];
+    for (const b of list) {
       if (!b || !b.block_content) continue;
-      for (const s of String(b.block_content).split(/\r?\n/)) {
-        const t = s.trim();
-        if (t) out.push(t);
-      }
+      const type = String(b.block_label || 'text').toLowerCase();
+      const lines = String(b.block_content).split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+      if (lines.length) blocks.push({ type, lines });
     }
-    if (!blocks.length) {           // 兜底：老版本只给 markdown
+    if (!list.length) {                    // 兜底：老版本只给 markdown，按空行切段
       const md = (page && page.markdown && page.markdown.text) || '';
-      for (const s of md.split(/\r?\n/)) {
-        const t = s.trim();
-        if (t) out.push(t);
+      for (const chunk of String(md).split(/\r?\n\s*\r?\n/)) {
+        const lines = chunk.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+        if (!lines.length) continue;
+        const isTable = lines.every(s => s.startsWith('|'));
+        blocks.push({ type: isTable ? 'table' : 'text', lines });
       }
     }
   }
-  return out;
+  if (blocks.length) return blocks;
+
+  // PP-OCR 系列：逐行 + 坐标，按行距聚段
+  for (const page of result.ocrResults || []) {
+    const pr = (page && page.prunedResult) || {};
+    const texts = pr.rec_texts || [];
+    if (!texts.length) continue;
+    blocks.push.apply(blocks, groupTextLines(texts, pr.rec_boxes || pr.rec_polys || []));
+  }
+  return blocks;
 }
 
 async function callPaddle(image, mime, ms) {
@@ -324,12 +390,13 @@ async function callPaddle(image, mime, ms) {
   if (!jsonUrl) throw new OcrError('other', '任务完成但没给结果地址');
   const rres = await fetchTimeout(jsonUrl, {}, Math.min(6000, Math.max(1500, deadline - Date.now())));
   const data = await rres.json();
+  const blocks = paddleBlocks(data);
   const lines = paddleLines(data);
   if (!lines.length) {
     const why = (data && (data.errorMsg || data.errorCode)) || '';
     throw new OcrError('empty', why && why !== 'Success' ? String(why) : '没认出文字');
   }
-  return lines;
+  return { lines, blocks };
 }
 
 // ---------------------------------------------------------------- EasyOCR
@@ -379,7 +446,7 @@ async function callEasyOcr(image, mime, ms) {
   const blocks = (data.words || []).slice().sort((a, b) => (a.top - b.top) || (a.left - b.left));
   const lines = blocks.map(w => String((w && w.text) || '').trim()).filter(Boolean);
   if (!lines.length) throw new OcrError('empty', '没认出文字');
-  return lines;
+  return { lines, blocks: [] };
 }
 
 async function runEngine(name, image, mime, ms) {
@@ -450,13 +517,16 @@ exports.handler = async (event) => {
 
       const t0 = Date.now();
       try {
-        const lines = await runEngine(name, image, mime, budget);
+        const r = await runEngine(name, image, mime, budget);
+        const lines = (r && r.lines) || [];
+        const blocks = (r && r.blocks) || [];
         const ms = Date.now() - t0;
-        if (lines && lines.length) {
+        if (lines.length) {
           attempts.push({ engine: name, label, ok: true, code: '', error: '', ms });
           return respond(200, {
             ok: true,
             lines,
+            blocks: blocks.length > 1 ? blocks : undefined,
             num: lines.length,
             endpoint: name,
             label,

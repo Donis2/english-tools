@@ -429,10 +429,10 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
       <div class="pastehint" id="pastehint">粘贴后的截图会按顺序加入上方队列。</div>
 
       <div class="controls">
-        <label class="switch" title="关闭时逐行还原识别结果（推荐，最贴近原图）；开启后会把同一段的多行拼成一句">
-          <input type="checkbox" id="mergeSw">
+        <label class="switch" title="开启后按原图版块还原段落：同一段的多行接回去，标题/表格保持原样；关闭则逐行显示">
+          <input type="checkbox" id="mergeSw" checked>
           <span class="track"></span>
-          <span>自动合并段落</span>
+          <span>按原图分段</span>
         </label>
         <div class="engine-row">
           <span>识别引擎</span>
@@ -500,7 +500,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 </div>
 
 <!-- Tesseract 由 ocr.js 按需加载（jsdelivr → unpkg → npmmirror 自动换源），不再写死一个 CDN -->
-<script src="ocr.js?v=2"></script>
+<script src="ocr.js?v=3"></script>
 <!-- 同域共用背单词的数据库：实战单词直接写进 IndexedDB -->
 <script src="../vocab/js/vendor/dexie.min.js"></script>
 <script src="../vocab/js/db.js?v=24"></script>
