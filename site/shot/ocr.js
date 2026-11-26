@@ -8,6 +8,16 @@
   const TERMINAL_PUNCT = ".!?;:。！？；：…";
   const BULLET_RE = /^\s*(?:[-*•·○◦▪‣–—]|\(?\d{1,2}[.)、]|（\d{1,2}）|[①-⑳])/;
 
+  // ---- 考研阅读常见排版：选项 / 题号 / 小标题 ----
+  // 选项：[A] （A） 【A】 A. A) A、 —— 点号形式只认大写，避免把冠词 A、缩写 e.g. 当成选项
+  const OPTION_RE = /^\s*(?:[\[（(【]\s*[A-Ha-h]\s*[\]）)】]|[A-H]\s*[.．、:：)）])\s*\S/;
+  // 题号：36. 36) （36） 36、
+  const QNUM_RE = /^\s*(?:[（(]\s*\d{1,2}\s*[)）]|\d{1,2}\s*[.．]\s+|\d{1,2}\s*[、)）])\s*\S/;
+  // 小标题：Text 1 / Passage 2 / Part A / Section II / Directions:
+  const HEAD_RE = /^\s*(?:Text\s*\d+|Passage\s*\d+|Part\s+[A-C]\b|Section\s+[IVX]+\b|Directions?\s*[:：])/i;
+  // 左右两栏的选项常被识别成同一行：找行内所有选项标记
+  const OPTION_TOKEN_RE = /(^|\s)((?:[\[（(【]\s*[A-Ha-h]\s*[\]）)】]|[A-H]\s*[.．、:：)）]))(?=\s*\S)/g;
+
   const Vocab = {
     byKey: new Map(),
     aliases: {},
@@ -149,6 +159,86 @@
   }
 
   // ---------------------------------------------------------- 段落重建
+  /* 这一行是不是新段落的开头：选项、题号、小标题都要单独成段 */
+  function isBlockStart(text) {
+    return OPTION_RE.test(text) || QNUM_RE.test(text) || HEAD_RE.test(text);
+  }
+
+  /* 两栏排版的 A/B 选项常被识别成一行，按行内标记拆开；
+     至少两个标记才拆，避免把 "vitamin B. ..." 这种正常句子拆坏 */
+  function splitInlineOptions(text) {
+    const line = normalizeSpaces(text);
+    if (line.length < 8) return [line];
+    const marks = [];
+    OPTION_TOKEN_RE.lastIndex = 0;
+    let m;
+    while ((m = OPTION_TOKEN_RE.exec(line)) !== null) {
+      marks.push(m.index + m[1].length);
+    }
+    if (marks.length < 2) return [line];
+    const parts = [];
+    if (marks[0] > 0) parts.push(line.slice(0, marks[0]).trim());
+    for (let i = 0; i < marks.length; i++) {
+      const end = i + 1 < marks.length ? marks[i + 1] : line.length;
+      const seg = line.slice(marks[i], end).trim();
+      if (seg) parts.push(seg);
+    }
+    return parts.length ? parts : [line];
+  }
+
+  // 选项首字母：用于把被按栏返回的 A、C、B、D 排回 A、B、C、D
+  const OPTION_ORDER_RE = /^\s*(?:[\[（(【]\s*([A-Ha-h])\s*[\]）)】]|([A-H])\s*[.．、:：)）])/;
+  function optionRank(text) {
+    const m = OPTION_ORDER_RE.exec(text);
+    if (!m) return -1;
+    return (m[1] || m[2]).toUpperCase().charCodeAt(0) - 65;
+  }
+
+  /* 两栏排版时引擎常按「左栏 A、C，右栏 B、D」返回；
+     把连续出现的选项块按字母排回 A、B、C、D，题号/正文会自然把不同题的选项隔开 */
+  function orderOptions(texts) {
+    const out = [];
+    let i = 0;
+    while (i < texts.length) {
+      if (optionRank(texts[i]) < 0) { out.push(texts[i]); i += 1; continue; }
+      const run = [];
+      while (i < texts.length && optionRank(texts[i]) >= 0) run.push(texts[i++]);
+      const ranks = run.map(optionRank);
+      // 字母有重复，说明是两题的选项连在一起（题干没识别出来），别乱排
+      const unique = new Set(ranks).size === ranks.length;
+      if (run.length > 1 && unique) {
+        run
+          .map((t, k) => ({ t, r: ranks[k], k }))
+          .sort((a, b) => a.r - b.r || a.k - b.k)
+          .forEach(x => out.push(x.t));
+      } else {
+        for (const t of run) out.push(t);
+      }
+    }
+    return out;
+  }
+
+  // 选项标记和正文之间补一个空格：「A.ways」→「A. ways」
+  const OPTION_PREFIX_RE = /^\s*(?:[\[（(【]\s*[A-Ha-h]\s*[\]）)】]|[A-H]\s*[.．、:：)）])\s*/;
+  function tidyOption(text) {
+    return OPTION_PREFIX_RE.test(text) ? text.replace(OPTION_PREFIX_RE, m => m.trim() + ' ') : text;
+  }
+
+  /* 一个块里的行，遇到选项/题号/小标题就断开；普通折行仍然接回去 */
+  function paragraphsFromLines(lines) {
+    const paras = [];
+    let cur = [];
+    for (const text of lines) {
+      // 小标题要单独成段：它自己断开，下面正文也要另起
+      if (cur.length && (isBlockStart(text) || HEAD_RE.test(cur[cur.length - 1]))) {
+        paras.push(cur); cur = [];
+      }
+      cur.push(text);
+    }
+    if (cur.length) paras.push(cur);
+    return paras.map(joinLines);
+  }
+
   function joinTwo(prev, cur) {
     if (prev.endsWith('-')) {
       const head = prev.slice(prev.lastIndexOf(' ') + 1).toLowerCase();
@@ -189,7 +279,9 @@
         (it.top - (prev.top + prev.height) > baseGap + lh * 0.7) ||
         (it.left - prev.left > lh * 1.3) ||
         (prev.text && TERMINAL_PUNCT.indexOf(prev.text[prev.text.length - 1]) >= 0) ||
-        BULLET_RE.test(it.text);
+        BULLET_RE.test(it.text) ||
+        isBlockStart(it.text) ||
+        HEAD_RE.test(prev.text || '');
       if (newPara) { paras.push(cur); cur = [it]; }
       else cur.push(it);
     }
@@ -327,7 +419,14 @@
         }
       }
     }
-    if (out.length) return out;
+    if (out.length) {
+      // 同一视觉行里挤着 [A] xxx [B] yyy：拆成两项（坐标相同，后续按标记断开段落）
+      const expanded = [];
+      for (const it of out) {
+        for (const text of splitInlineOptions(it.text)) expanded.push(Object.assign({}, it, { text }));
+      }
+      return expanded;
+    }
     // 兜底：没有 blocks 时按文本换行切
     return String(data.text || '')
       .split('\n').map(t => normalizeSpaces(t)).filter(Boolean)
@@ -454,8 +553,8 @@
       : isPaddle ? 4 * MB
       : 2.8 * MB;                                // 百度 3MB、EasyOCR 3MB 的共同安全线
     const maxSide = isPaddle ? 1800 : 2600;
-    const upload = await shrinkForCloud(file, target, maxSide);
-    const dataUrl = await fileToDataURL(upload);
+    const shot = await shrinkForCloud(file, target, maxSide);
+    const dataUrl = await fileToDataURL(shot.file);
     let res;
     try {
       res = await fetchTimeout(CLOUD_ENDPOINT, {
@@ -488,11 +587,14 @@
       type: String((b && b.type) || 'text').toLowerCase(),
       lines: ((b && b.lines) || []).map(t => normalizeSpaces(t)).filter(Boolean),
     })).filter(b => b.lines.length);
-    return { lines, blocks, endpoint: j.endpoint || '', attempts: j.attempts || [], shrunk: upload !== file };
+    return { lines, blocks, endpoint: j.endpoint || '', attempts: j.attempts || [], shrunk: shot.resized };
   }
 
   /* 大图先缩到云端吃得快的尺寸：体积超标或长边超限才处理，
-     省掉「因为太大被每个引擎拒绝」和「服务端慢慢缩图」两种白跑。 */
+     省掉「因为太大被每个引擎拒绝」和「服务端慢慢缩图」两种白跑。
+     顺带在四周留白：PaddleOCR-VL 会漏掉紧贴图片顶边的第一行（题干常在那儿）。 */
+  const CLOUD_PAD = 24;
+
   function imageSize(file) {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -503,21 +605,24 @@
     });
   }
 
-  function drawToCanvas(file, maxSide) {
+  function drawToCanvas(file, maxSide, pad = 0) {
     return new Promise((resolve, reject) => {
       const img = new Image();
       const url = URL.createObjectURL(file);
       img.onload = () => {
-        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const inner = Math.max(1, maxSide - pad * 2);
+        const scale = Math.min(1, inner / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
         const c = document.createElement('canvas');
-        c.width = Math.max(1, Math.round(img.width * scale));
-        c.height = Math.max(1, Math.round(img.height * scale));
+        c.width = w + pad * 2;
+        c.height = h + pad * 2;
         const ctx = c.getContext('2d');
         ctx.fillStyle = '#fff';                 // 透明底转白，识别更稳
         ctx.fillRect(0, 0, c.width, c.height);
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
-        ctx.drawImage(img, 0, 0, c.width, c.height);
+        ctx.drawImage(img, pad, pad, w, h);
         URL.revokeObjectURL(url);
         resolve(c);
       };
@@ -527,7 +632,7 @@
   }
 
   async function shrinkForCloud(file, targetBytes = 1.4 * 1024 * 1024, maxSide = 2600) {
-    if (!file) return file;
+    if (!file) return { file, resized: false };
     let long = 0;
     try {
       const { w, h } = await imageSize(file);
@@ -535,26 +640,38 @@
     } catch (e) {
       long = 0;                                  // 读不出尺寸就只按体积判断
     }
-    if (long <= maxSide && file.size <= targetBytes) return file;
+    const resized = long > maxSide || file.size > targetBytes;
+    const base = (file.name || 'image').replace(/\.\w+$/, '');
 
-    const canvas = await drawToCanvas(file, maxSide);
+    // 一律重画一次：四周补白，挡住「顶边第一行被漏掉」
+    const canvas = await drawToCanvas(file, maxSide, CLOUD_PAD);
+    if (file.type === 'image/png') {
+      const png = await new Promise(r => canvas.toBlob(r, 'image/png'));
+      if (png && png.size <= targetBytes) {
+        return { file: new File([png], base + '.png', { type: 'image/png' }), resized };
+      }
+    }
     for (const quality of [0.92, 0.85, 0.75, 0.65, 0.55]) {
       const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', quality));
       if (blob && blob.size <= targetBytes) {
-        return new File([blob], (file.name || 'image').replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' });
+        return { file: new File([blob], base + '.jpg', { type: 'image/jpeg' }), resized };
       }
     }
-    return file;                                 // 压不下去就原样发，交给服务端按上限换引擎
+    return { file, resized };                    // 压不下去就原样发，交给服务端按上限换引擎
   }
 
   function mergeByPunct(lines) {
     const paras = [];
     let cur = [];
-    for (const line of lines) {
-      if (cur.length && TERMINAL_PUNCT.indexOf(cur[cur.length - 1].slice(-1)) >= 0) {
-        paras.push(cur); cur = [];
+    for (const raw of lines) {
+      for (const line of splitInlineOptions(raw)) {
+        const prev = cur[cur.length - 1] || '';
+        if (cur.length && (isBlockStart(line) || HEAD_RE.test(prev) ||
+            TERMINAL_PUNCT.indexOf(prev.slice(-1)) >= 0)) {
+          paras.push(cur); cur = [];
+        }
+        cur.push(line);
       }
-      cur.push(line);
     }
     if (cur.length) paras.push(cur);
     return paras.map(joinLines);
@@ -564,30 +681,32 @@
      否则整段挤成一行既难看也没法逐词点。 */
   function splitLongLines(lines, max = 260) {
     const out = [];
-    for (const line of lines) {
-      if (line.length <= max) { out.push(line); continue; }
-      const parts = line.split(/(?<=[.!?])\s+/);
-      let buf = '';
-      for (const p of parts) {
-        if (buf && (buf.length + 1 + p.length) > max) { out.push(buf); buf = p; }
-        else buf = buf ? buf + ' ' + p : p;
+    for (const raw of lines) {
+      for (const line of splitInlineOptions(raw)) {
+        if (line.length <= max) { out.push(line); continue; }
+        const parts = line.split(/(?<=[.!?])\s+/);
+        let buf = '';
+        for (const p of parts) {
+          if (buf && (buf.length + 1 + p.length) > max) { out.push(buf); buf = p; }
+          else buf = buf ? buf + ' ' + p : p;
+        }
+        if (buf) out.push(buf);
       }
-      if (buf) out.push(buf);
     }
     return out;
   }
 
-  /* 按原图版块还原段落：正文块把折行接回去，标题/表格/列表保持逐行 */
+  /* 按原图版块还原段落：正文块把折行接回去，标题/表格/列表保持逐行；
+     块里混着题号和 ABCD 选项时，也要在选项处断开 */
   function blocksToParagraphs(blocks) {
     const out = [];
     const TEXTY = { text: 1, abstract: 1, content: 1, reference: 1, footnote: 1, formula: 1 };
     for (const b of blocks) {
       if (!b.lines.length) continue;
-      if (TEXTY[b.type] !== undefined) {
-        out.push(joinLines(b.lines));
-      } else {
-        for (const line of b.lines) out.push(line);
-      }
+      const lines = [];
+      for (const l of b.lines) lines.push(...splitInlineOptions(l));
+      if (TEXTY[b.type] !== undefined) out.push(...paragraphsFromLines(lines));
+      else for (const line of lines) out.push(line);
     }
     return out;
   }
@@ -649,7 +768,7 @@
         } else if (merge) {
           texts = mergeByPunct(items.map(i => i.text));
         } else {
-          texts = items.map(i => i.text);
+          texts = splitLongLines(items.map(i => i.text));
         }
         engineId = 'local';
       } catch (e) {
@@ -659,6 +778,7 @@
     }
 
     let nWords = 0;
+    texts = orderOptions(texts).map(tidyOption);
     const parsed = texts.map(t => {
       const r = tokenize(t);
       nWords += r.n;
@@ -690,5 +810,7 @@
     loadVocab, analyze, rematch, onProgress, ensureWorker, probe,
     ENGINE_LABELS, ENGINE_SHORT, CODE_TEXT, cloudState,
     tessSource: () => tessSource,     // 排查「本地引擎从哪个源加载的」
+    // 排版辅助函数：单独用来检查某段 OCR 行会被分成什么样
+    layout: { splitInlineOptions, orderOptions, blocksToParagraphs, mergeByPunct, splitLongLines, isBlockStart },
   };
 })(window);
