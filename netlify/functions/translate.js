@@ -4,15 +4,15 @@
  *
  * 两种用法：
  * 1) 默认：读服务端环境变量（推荐，key 不下发到浏览器）
- *      BAILU_API_KEY         必填，接口 key
- *      BAILU_TRANSLATE_MODEL 可选，默认 bailu-2.6
- *      BAILU_API_BASE        可选，默认白鹿开放平台，换别的 OpenAI 兼容服务时填
- * 2) 前端「翻译设置」里填了 API 地址 / Key / 模型时，以页面设置为准（单人自用方便换服务）
+ *      TRANSLATE_API_KEY     必填，接口 key
+ *      TRANSLATE_MODEL       可选，默认 qwen-flash
+ *      TRANSLATE_API_BASE    可选，默认通义千问兼容模式，换别的 OpenAI 兼容服务时填
+ * 2) 前端「设置 → AI · API」里填了 API 地址 / Key / 模型时，以页面设置为准（单人自用方便换服务）
  *
  * 同一段文字会缓存，重复翻译不重复扣额度。
  */
 
-const DEFAULT_API_BASE = 'https://bailucode.com/openapi/v1';
+const DEFAULT_API_BASE = 'https://maas.qianwenaiapi.com/compatible-mode/v1';
 const MAX_CHARS = 3000;          // 一次最多翻多少字符，防止误选整页
 const CACHE_MAX = 300;          // 进程内缓存条数
 const TIMEOUT_MS = 20000;
@@ -36,7 +36,7 @@ function respond(statusCode, obj) {
  * 只允许公网 http(s)，挡掉 localhost / 内网地址，避免服务端被当成跳板。
  */
 function resolveEndpoint(raw) {
-  const base = String(raw || '').trim() || process.env.BAILU_API_BASE || DEFAULT_API_BASE;
+  const base = String(raw || '').trim() || process.env.TRANSLATE_API_BASE || DEFAULT_API_BASE;
   let u;
   try {
     u = new URL(base);
@@ -54,7 +54,7 @@ function resolveEndpoint(raw) {
 }
 
 function modelName(raw) {
-  return String(raw || '').trim() || process.env.BAILU_TRANSLATE_MODEL || 'bailu-2.6';
+  return String(raw || '').trim() || process.env.TRANSLATE_MODEL || 'qwen-flash';
 }
 
 exports.handler = async (event) => {
@@ -70,9 +70,9 @@ exports.handler = async (event) => {
 
   // 页面里填了就优先用页面的，否则回落到服务端环境变量
   const endpoint = resolveEndpoint(payload.apiBase);
-  const key = String(payload.apiKey || '').trim() || process.env.BAILU_API_KEY;
+  const key = String(payload.apiKey || '').trim() || process.env.TRANSLATE_API_KEY;
   if (!endpoint) return respond(200, { ok: false, error: 'API 地址无效（只支持公网 http/https）' });
-  if (!key) return respond(200, { ok: false, error: '还没有配置 API Key：去「翻译设置」填，或在 Netlify 加 BAILU_API_KEY' });
+  if (!key) return respond(200, { ok: false, error: '还没有配置 API Key：去「设置 → AI · API」填，或在 Netlify 加 TRANSLATE_API_KEY' });
 
   // 兜底清洗：前端已去掉词频角标，这里再把多余空白压掉
   const text = String(payload.text || '').replace(/\s+/g, ' ').trim();

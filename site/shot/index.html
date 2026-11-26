@@ -563,7 +563,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 <div class="overlay" id="tlOverlay" hidden>
   <div class="modal tl-modal" role="dialog" aria-modal="true" aria-label="AI 翻译">
     <button class="close" id="tlClose" aria-label="关闭">×</button>
-    <div class="tl-title">AI 翻译 <span class="tag">白鹿 · bailu</span></div>
+    <div class="tl-title">AI 翻译 <span class="tag">通义千问</span></div>
     <div class="tl-src" id="tlSrc"></div>
     <div class="tl-out" id="tlOut"></div>
     <div class="tl-foot">
@@ -605,7 +605,7 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 
     <section class="set-sec" id="paneApi" role="tabpanel" aria-labelledby="tabApi" hidden>
       <label class="cfg-label">API 地址
-        <input class="cfg-input" id="cfgBase" type="url" placeholder="https://bailucode.com/openapi/v1"
+        <input class="cfg-input" id="cfgBase" type="url" placeholder="https://maas.qianwenaiapi.com/compatible-mode/v1"
                autocomplete="off" spellcheck="false">
       </label>
       <label class="cfg-label">API Key
@@ -613,15 +613,14 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
                autocomplete="off" spellcheck="false">
       </label>
       <label class="cfg-label">模型
-        <input class="cfg-input" id="cfgModel" list="cfgModelList" placeholder="bailu-2.6"
+        <input class="cfg-input" id="cfgModel" list="cfgModelList" placeholder="qwen-flash"
                autocomplete="off" spellcheck="false">
       </label>
       <datalist id="cfgModelList">
-        <option value="bailu-2.6"></option>
-        <option value="bailu-2.7-lite"></option>
-        <option value="bailu-2.7"></option>
-        <option value="bailu-2.8"></option>
-        <option value="bailu-auto"></option>
+        <option value="qwen-flash"></option>
+        <option value="qwen-plus"></option>
+        <option value="qwen-max"></option>
+        <option value="qwen-long"></option>
       </datalist>
       <div class="cfg-note">留空则用服务端配置。这里填的 API 只保存在当前浏览器，翻译时经本站云函数转发；换其他 OpenAI 兼容服务时，地址填到 /v1 即可。</div>
       <div class="cfg-foot">
